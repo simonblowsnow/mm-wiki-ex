@@ -569,3 +569,12 @@ mark {
     font-weight: bold;
 }
 
+.tabActive {
+    background-color: #d13173; color: #fff
+}
+.tabView {
+    float: left; line-height: 28px; cursor: pointer;
+}
+.tabView:hover {
+    background-color: #f1e1e8; color: #fff
+}

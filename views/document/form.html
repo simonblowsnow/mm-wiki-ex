@@ -1,7 +1,19 @@
 <div class="container-fluid">
     <div id="failedBox" class="hide"></div>
+
     <div class="panel panel-default">
-        <div class="panel-body">
+
+        <!-- Tab选择器 -->
+        <div style="text-align: center; height: 30px; margin-bottom: 5px; border-bottom: 1px solid #eee;">
+            <div id="tabNew" class="tabView tabActive" style="width: 50%;  border-right: 1px solid #ccc;" onclick="Form.clickTab(0)">
+                新  建
+            </div>
+            <div id="tabUpload" class="tabView" style="width: 48%;" onclick="Form.clickTab(1)">
+                上传文件
+            </div>
+        </div>
+
+        <div id="tabPanelNew" class="panel-body">
             <br>{{$parentDocuments := .parent_documents}}{{$spaceId := .space_id}}{{$parentId := .parent_id}}
             <form class="form-horizontal" method="post" action="/document/save" onsubmit="return false">
                 <input type="hidden" name="parent_id" value="{{$parentId}}">
@@ -49,5 +61,25 @@
                 </div>
             </form>
         </div>
+        
+        <!-- 上传文件界面 -->
+        <div id="tabPanelUpload" class="panel-body" style="display: none; ">
+            <form enctype="multipart/form-data" class="form-horizontal" method="post" action="/document/save" onsubmit="return false">
+                <div style="min-height: 200px;">
+                    <div class="form-group">
+                        <div class="file-loading">
+                            <input id="fileUploads" class="file" type="file" multiple data-min-file-count="1" data-preview-file-type="any" 
+                            data-upload-url="/Source" data-theme="fas">
+                        </div>
+                    </div>
+                </div>
+            </form>
+            <!-- <script>
+                console.log($('#tabPanelUpload').html());
+            </script> -->
+            
+        </div>
     </div>
 </div>
+
+<script type="text/javascript" src="/static/js/modules/docEx.js"></script>

@@ -80,3 +80,20 @@ var Form = {
         return false;
     }
 };
+
+// 新增
+Form.clickTab = function (idx) {
+    
+    if (idx == 0) {
+        $("#tabPanelNew").show();
+        $("#tabPanelUpload").hide();
+        $("#tabNew").addClass("tabActive");
+        $("#tabUpload").removeClass("tabActive");
+    } else {
+        $("#tabPanelNew").hide();
+        $("#tabPanelUpload").show();
+        $("#tabNew").removeClass("tabActive");
+        $("#tabUpload").addClass("tabActive");
+    }
+    
+}
