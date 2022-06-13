@@ -569,6 +569,7 @@ mark {
     font-weight: bold;
 }
 
+/* ======================= 新增 ======================= */
 .tabActive {
     background-color: #d13173; color: #fff
 }
@@ -577,4 +578,24 @@ mark {
 }
 .tabView:hover {
     background-color: #f1e1e8; color: #fff
+}
+#tabPanelUpload .file-thumbnail-footer{
+    height: 40px;
+}
+#tabPanelUpload .file-footer-caption{
+    margin-bottom: 25px;
+}
+
+#tabPanelUpload .kv-file-content{
+    width: 208px!important;
+    height: 110px!important;
+}
+#tabPanelUpload .file-preview-text, .file-preview-pdf{
+    height: 110px!important;
+}
+#tabPanelUpload .file-preview-object{
+    height: 110px!important;
+}
+#tabPanelUpload .file-thumb-progress>.progress, .progress-bar-success{
+    height: 18px!important;
 }

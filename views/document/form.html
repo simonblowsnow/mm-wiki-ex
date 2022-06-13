@@ -3,7 +3,7 @@
 
     <div class="panel panel-default">
 
-        <!-- Tab选择器 -->
+        <!-- 【新增·Tab选择器】 -->
         <div style="text-align: center; height: 30px; margin-bottom: 5px; border-bottom: 1px solid #eee;">
             <div id="tabNew" class="tabView tabActive" style="width: 50%;  border-right: 1px solid #ccc;" onclick="Form.clickTab(0)">
                 新  建
@@ -13,12 +13,13 @@
             </div>
         </div>
 
-        <div id="tabPanelNew" class="panel-body">
+        <!-- 【修改·部分样式】 -->
+        <div id="tabPanelNew" class="panel-body" style="padding: 30px 15px;">
             <br>{{$parentDocuments := .parent_documents}}{{$spaceId := .space_id}}{{$parentId := .parent_id}}
             <form class="form-horizontal" method="post" action="/document/save" onsubmit="return false">
                 <input type="hidden" name="parent_id" value="{{$parentId}}">
                 <input type="hidden" name="space_id" value="{{$spaceId}}">
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 35px">
                     <label class="col-sm-2 control-label"><span class="text-danger"> * </span> 父文档</label>
                     <div class="col-sm-6 form-comment">
                         <span class="control-label">
@@ -32,7 +33,7 @@
                         </span>
                     </div>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 35px">
                     <label class="col-sm-2 control-label"><span class="text-danger"> * </span>类型</label>
                     <div class="col-sm-5">
                         <div class="radio radio-inline radio-primary">
@@ -45,7 +46,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 35px">
                     <label class="col-sm-2 control-label"><span class="text-danger"> * </span> 名称</label>
                     <div class="col-sm-5">
                         <input type="text" name="name" class="form-control" placeholder="请输入文档名称" value="">
@@ -64,22 +65,22 @@
         
         <!-- 上传文件界面 -->
         <div id="tabPanelUpload" class="panel-body" style="display: none; ">
-            <form enctype="multipart/form-data" class="form-horizontal" method="post" action="/document/save" onsubmit="return false">
+            <form enctype="multipart/form-data" class="form-horizontal" method="post" action="">
+                <!-- <input type="hidden" name="parent_id" value="{{$parentId}}">
+                <input type="hidden" name="space_id" value="{{$spaceId}}"> -->
                 <div style="min-height: 200px;">
                     <div class="form-group">
                         <div class="file-loading">
-                            <input id="fileUploads" class="file" type="file" multiple data-min-file-count="1" data-preview-file-type="any" 
-                            data-upload-url="/Source" data-theme="fas">
+                            <input id="fileUploads" name="files" type="file" multiple data-min-file-count="1" 
+                            data-preview-file-type="any" data-upload-url="/document/upload" data-theme="fas">
                         </div>
                     </div>
                 </div>
             </form>
-            <!-- <script>
-                console.log($('#tabPanelUpload').html());
-            </script> -->
-            
         </div>
+
     </div>
 </div>
 
+<!-- class="file" -->
 <script type="text/javascript" src="/static/js/modules/docEx.js"></script>

@@ -218,6 +218,14 @@ var Document = {
 
             // bind add
             var addBtn = $("#addBtn_" + treeNode.tId);
+
+            // 【修改·弹出框自适应】
+            let W = $(document.body).width();
+            let H = $(document.body).height();
+            let width = W > 800 ? 800 : W;
+            let height = H > 670 ? 460 : 500;
+            console.log(H + ": " + height);
+
             if (addBtn) addBtn.bind("click", function () {
                 var content = "/document/add?space_id=" + treeNode.spaceId + "&parent_id=" + treeNode.id;
                 layer.open({
@@ -227,7 +235,7 @@ var Document = {
                     shadeClose: true,
                     shade: 0.6,
                     maxmin: true,
-                    area: ["800px", "345px"],
+                    area: [width + "px", height + "px"],
                     content: content,
                     padding: "10px"
                 });
