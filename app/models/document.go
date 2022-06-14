@@ -216,7 +216,7 @@ func (d *Document) DeleteDBAndFile(documentId string, spaceId string, userId str
 
 // insert document
 func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err error) {
-
+	
 	db := G.DB()
 	// start db begin
 	tx, err := db.Begin(db.Config)
@@ -227,7 +227,8 @@ func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err e
 	// 处理同级排序编号
 	parentId := documentValue["parent_id"].(string)
 	spaceId := documentValue["space_id"].(string)
-
+	upload := documentValue["upload"].(int)
+	
 	sequence, err := d.GetDocumentMaxSequence(parentId, spaceId)
 	if err != nil {
 		sequence = 0
@@ -235,7 +236,7 @@ func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err e
 
 	sequence += 1
 	documentValue["sequence"] = strconv.Itoa(sequence)
-
+	
 	var rs *mysql.ResultSet
 	documentValue["create_time"] = time.Now().Unix()
 	documentValue["update_time"] = time.Now().Unix()
@@ -245,26 +246,29 @@ func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err e
 		return
 	}
 	id = rs.LastInsertId
-
-	// create document page file
-	document := map[string]string{
-		"space_id":  documentValue["space_id"].(string),
-		"parent_id": documentValue["parent_id"].(string),
-		"name":      documentValue["name"].(string),
-		"type":      fmt.Sprintf("%d", documentValue["type"].(int)),
-		"path":      documentValue["path"].(string),
+	
+	// 【修改·上传文件无需新建md】
+	if upload != 1 {
+		// create document page file
+		document := map[string]string{
+			"space_id":  documentValue["space_id"].(string),
+			"parent_id": documentValue["parent_id"].(string),
+			"name":      documentValue["name"].(string),
+			"type":      fmt.Sprintf("%d", documentValue["type"].(int)),
+			"path":      documentValue["path"].(string),
+		}
+		_, pageFile, err := d.GetParentDocumentsByDocument(document)
+		err = utils.Document.Create(pageFile)
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+		if err != nil {
+			return
+		}
 	}
-	_, pageFile, err := d.GetParentDocumentsByDocument(document)
-	err = utils.Document.Create(pageFile)
-	if err != nil {
-		tx.Rollback()
-		return
-	}
-	err = tx.Commit()
-	if err != nil {
-		return
-	}
-
+	
 	userId := documentValue["create_user_id"].(string)
 	// create document log
 	go func(userId, documentId, spaceId string) {

@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"strconv"
+	"path/filepath"
 	
 	"github.com/phachon/mm-wiki/app/models"
 	"github.com/phachon/mm-wiki/app/utils"
@@ -496,6 +497,10 @@ func (this *DocumentController) Delete() {
 // 注·九成以上代码来自于Save()方法
 // upload file
 func (this *DocumentController) Upload() {
+	
+	if !this.IsPost() {
+		this.ViewError("请求方式有误！", "/main/index")
+	}
 	spaceId := strings.TrimSpace(this.GetString("space_id", "0"))
 	parentId := strings.TrimSpace(this.GetString("parent_id", "0"))
 	strconv.Itoa(1)
@@ -517,7 +522,8 @@ func (this *DocumentController) Upload() {
 	if !isEditor {
 		this.jsonError("您没有权限在该空间下创建文档！")
 	}
-	parentDocument, err := models.DocumentModel.GetDocumentByDocumentId(parentId)
+	d := models.DocumentModel 
+	parentDocument, err := d.GetDocumentByDocumentId(parentId)
 	if err != nil {
 		this.ErrorLog("创建保存文档失败：" + err.Error())
 		this.jsonError("创建文档失败！")
@@ -530,7 +536,7 @@ func (this *DocumentController) Upload() {
 	}
 	
 	// check document name
-	document, err := models.DocumentModel.GetDocumentByNameParentIdAndSpaceId("Readme", parentId, spaceId, 1)
+	document, err := d.GetDocumentByNameParentIdAndSpaceId("Readme", parentId, spaceId, 1)
 	if err != nil {
 		this.ErrorLog("创建保存文档失败：" + err.Error())
 		this.jsonError("创建文档失败！")
@@ -539,75 +545,44 @@ func (this *DocumentController) Upload() {
 		this.jsonError("该文档名称已经存在！")
 	}
 	
-
-//	insertDocument := map[string]interface{}{
-//		"parent_id":      parentId,
-//		"space_id":       spaceId,
-//		"name":           name,
-//		"type":           docType,
-//		"path":           parentDocument["path"] + "," + parentId,
-//		"create_user_id": this.UserId,
-//		"edit_user_id":   this.UserId,
-//	}
-//	documentId, err := models.DocumentModel.Insert(insertDocument)
-//	if err != nil {
-//		this.ErrorLog("创建文档失败：" + err.Error())
-//		this.jsonError("创建文档失败")
-//	}
-//	this.InfoLog("创建文档 " + utils.Convert.IntToString(documentId, 10) + " 成功")
-//	this.jsonSuccess("创建文档成功", nil, "/document/index?document_id="+utils.Convert.IntToString(documentId, 10))
-	
-	
-		
-//	f, h, e := this.GetFile("files")
-	
-//	if 1 == 1 this.jsonError("文件失败1")	
-	
-	
-	this.jsonError("获取上传文件失败！" + "1")
-	return
-	
-//	filename := h.Filename	
-//    defer f.Close()
-    
-//    ext := filename[strings.LastIndex(filename, ".")+1:]
-	
-	//	this.jsonError(filename + ", " + ext)
-	
-//	if err != nil {
-//		this.jsonError("获取上传文件失败！" + ext)
-//		return
-//	}
-//	this.SaveToFile("file", "static/upload/"+filename)
-	
-	/*
-	if !this.IsPost() {
-		this.ViewError("请求方式有误！", "/main/index")
+	f, h, err := this.GetFile("file1")
+	if err != nil {
+		this.jsonError("获取上传文件失败！")
 	}
-	spaceId := strings.TrimSpace(this.GetString("space_id", "0"))
-	parentId := strings.TrimSpace(this.GetString("parent_id", "0"))
-	docType, _ := this.GetInt("type", models.Document_Type_Page)
-	name := strings.TrimSpace(this.GetString("name", ""))
-
+	defer f.Close()
+	filename := h.Filename	
 	
+	// 获取文件目录绝对路径
+	doc := map[string]string{
+		"parent_id": parentId, "space_id": spaceId, "name": "", "type": "1",
+		"path": parentDocument["path"] + "," + parentId,
+	}
+	_, pageFile, err := d.GetParentDocumentsByDocument(doc)
+	absFilePath := utils.Document.GetAbsPageFileByPageFile(pageFile)
+	folder, _ := filepath.Split(absFilePath)
 	
+	// TODO：是否需要d.lock.Lock()？
+	this.SaveToFile("file1", folder + filename)
+	
+	// 入库
 	insertDocument := map[string]interface{}{
 		"parent_id":      parentId,
 		"space_id":       spaceId,
-		"name":           name,
-		"type":           docType,
+		"name":           filename,
+		"type":           1,
 		"path":           parentDocument["path"] + "," + parentId,
 		"create_user_id": this.UserId,
 		"edit_user_id":   this.UserId,
+		"upload": 		  1
 	}
+	
+//	this.jsonError(filename + ", " + absFilePath + ", " + folder)
+		
 	documentId, err := models.DocumentModel.Insert(insertDocument)
 	if err != nil {
-		this.ErrorLog("创建文档失败：" + err.Error())
-		this.jsonError("创建文档失败")
+		this.ErrorLog("上传文档失败：" + err.Error())
+		this.jsonError("上传文档失败")
 	}
-	
-	this.InfoLog("创建文档 " + utils.Convert.IntToString(documentId, 10) + " 成功")
-	*/
-	
-	this.jsonSuccess("创建文档成功", nil, "/document/index?document_id")
+	this.InfoLog("上传文档 " + utils.Convert.IntToString(documentId, 10) + " 成功")
+	this.jsonSuccess("上传文档成功", nil, "/document/index?document_id="+utils.Convert.IntToString(documentId, 10))
 }
