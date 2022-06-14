@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 
+//	"encoding/json"
 	"github.com/astaxie/beego/logs"
 )
 
@@ -51,7 +52,8 @@ func (this *PageController) View() {
 	if !isVisit {
 		this.ViewError("您没有权限访问该空间！")
 	}
-
+	
+	logs.Error(document)
 	// get parent documents by document
 	parentDocuments, pageFile, err := models.DocumentModel.GetParentDocumentsByDocument(document)
 	if err != nil {
@@ -61,7 +63,7 @@ func (this *PageController) View() {
 	if len(parentDocuments) == 0 {
 		this.ViewError("父文档不存在！")
 	}
-
+	
 	// get document content
 	documentContent, err := utils.Document.GetContentByPageFile(pageFile)
 	if err != nil {
@@ -92,6 +94,8 @@ func (this *PageController) View() {
 
 	collectionId := "0"
 	collection, err := models.CollectionModel.GetCollectionByUserIdTypeAndResourceId(this.UserId, models.Collection_Type_Doc, documentId)
+//	logs.Error("," + "asasas")
+	
 	if err != nil {
 		this.ErrorLog("查找文档 " + documentId + " 失败：" + err.Error())
 		this.ViewError("文档查找失败！")
@@ -127,7 +131,7 @@ func (this *PageController) Edit() {
 	if len(document) == 0 {
 		this.ViewError("文档不存在！")
 	}
-
+	
 	spaceId := document["space_id"]
 	space, err := models.SpaceModel.GetSpaceBySpaceId(spaceId)
 	if err != nil {
@@ -149,7 +153,7 @@ func (this *PageController) Edit() {
 		this.ErrorLog("查找父文档失败：" + err.Error())
 		this.ViewError("查找父文档失败！")
 	}
-
+	
 	// get document content
 	documentContent, err := utils.Document.GetContentByPageFile(pageFile)
 	if err != nil {

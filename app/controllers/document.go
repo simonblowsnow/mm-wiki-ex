@@ -5,11 +5,11 @@ import (
 	"github.com/phachon/mm-wiki/app/services"
 	"regexp"
 	"strings"
-	"strconv"
 	"path/filepath"
 	
 	"github.com/phachon/mm-wiki/app/models"
 	"github.com/phachon/mm-wiki/app/utils"
+//	"github.com/astaxie/beego/logs"
 )
 
 type DocumentController struct {
@@ -29,6 +29,7 @@ func (this *DocumentController) Index() {
 		this.ErrorLog("查找空间文档 " + documentId + " 失败：" + err.Error())
 		this.ViewError("查找文档失败！")
 	}
+	
 	if len(document) == 0 {
 		this.ViewError("文档不存在！")
 	}
@@ -63,7 +64,7 @@ func (this *DocumentController) Index() {
 		this.ErrorLog("查找文档 " + documentId + " 所在空间失败：" + err.Error())
 		this.ViewError("查找文档失败！")
 	}
-
+	
 	// get space privilege
 	_, isEditor, isDelete := this.GetDocumentPrivilege(space)
 
@@ -503,7 +504,6 @@ func (this *DocumentController) Upload() {
 	}
 	spaceId := strings.TrimSpace(this.GetString("space_id", "0"))
 	parentId := strings.TrimSpace(this.GetString("parent_id", "0"))
-	strconv.Itoa(1)
 	
 	if spaceId == "0" || parentId == "0" { 
 		this.jsonError("没有选择空间或父文档！")
@@ -569,11 +569,11 @@ func (this *DocumentController) Upload() {
 		"parent_id":      parentId,
 		"space_id":       spaceId,
 		"name":           filename,
-		"type":           1,
+		"type":           models.Document_Type_File,
 		"path":           parentDocument["path"] + "," + parentId,
 		"create_user_id": this.UserId,
 		"edit_user_id":   this.UserId,
-		"upload": 		  1
+//		"upload": 		  1,
 	}
 	
 //	this.jsonError(filename + ", " + absFilePath + ", " + folder)

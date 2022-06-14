@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+//		"github.com/astaxie/beego/logs"
 )
 
 var Document = NewDocument("./data", "./data/markdowns")
@@ -18,6 +19,7 @@ const (
 const (
 	Document_Type_Page = 1
 	Document_Type_Dir  = 2
+	Document_Type_File  = 3
 )
 
 func NewDocument(documentAbsDir string, markdownAbsDir string) *document {
@@ -33,12 +35,15 @@ type document struct {
 	lock           sync.Mutex
 }
 
+// 【修改·增加文档类型为3时不加后缀逻辑】
 // get document page file by parentPath
 func (d *document) GetPageFileByParentPath(name string, docType int, parentPath string) (pageFile string) {
 	if docType == Document_Type_Page {
 		pageFile = fmt.Sprintf("%s/%s%s", parentPath, name, Document_Page_Suffix)
-	} else {
+	} else if docType == Document_Type_Dir {
 		pageFile = fmt.Sprintf("%s/%s/%s%s", parentPath, name, Document_Default_FileName, Document_Page_Suffix)
+	} else {
+		pageFile = fmt.Sprintf("%s/%s", parentPath, name)
 	}
 	return
 }
@@ -67,6 +72,7 @@ func (d *document) Create(pageFile string) error {
 	absFilePath := d.GetAbsPageFileByPageFile(pageFile)
 	absDir := filepath.Dir(absFilePath)
 	err := os.MkdirAll(absDir, 0777)
+	
 	if err != nil {
 		d.lock.Unlock()
 		return err

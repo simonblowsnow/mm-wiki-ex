@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/phachon/mm-wiki/app/models"
+	"github.com/astaxie/beego/logs"
 )
 
 type MainController struct {
@@ -71,6 +72,7 @@ func (this *MainController) Default() {
 		this.ViewError("查找更新文档列表失败！")
 	}
 	docs, err := models.DocumentModel.GetAllDocumentsByDocumentIds(docIds)
+	
 	if err != nil {
 		this.ErrorLog("查找文档信息失败：" + err.Error())
 		this.ViewError("查找更新文档列表失败！")
@@ -91,6 +93,7 @@ func (this *MainController) Default() {
 				break
 			}
 		}
+		logs.Error(logDocument);
 	}
 
 	// link
