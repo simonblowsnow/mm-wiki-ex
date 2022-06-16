@@ -573,11 +573,8 @@ func (this *DocumentController) Upload() {
 		"path":           parentDocument["path"] + "," + parentId,
 		"create_user_id": this.UserId,
 		"edit_user_id":   this.UserId,
-//		"upload": 		  1,
 	}
 	
-//	this.jsonError(filename + ", " + absFilePath + ", " + folder)
-		
 	documentId, err := models.DocumentModel.Insert(insertDocument)
 	if err != nil {
 		this.ErrorLog("上传文档失败：" + err.Error())

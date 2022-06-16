@@ -2,12 +2,13 @@ package models
 
 import (
 	"fmt"
-	"github.com/astaxie/beego/logs"
-	"github.com/phachon/mm-wiki/app/utils"
-	"github.com/snail007/go-activerecord/mysql"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/astaxie/beego/logs"
+	"github.com/phachon/mm-wiki/app/utils"
+	"github.com/snail007/go-activerecord/mysql"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 
 	Document_Type_Page = 1
 	Document_Type_Dir  = 2
-	Document_Type_File  = 3
+	Document_Type_File = 3
 )
 
 const Table_Document_Name = "document"
@@ -217,7 +218,7 @@ func (d *Document) DeleteDBAndFile(documentId string, spaceId string, userId str
 
 // insert document
 func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err error) {
-	
+
 	db := G.DB()
 	// start db begin
 	tx, err := db.Begin(db.Config)
@@ -229,7 +230,7 @@ func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err e
 	parentId := documentValue["parent_id"].(string)
 	spaceId := documentValue["space_id"].(string)
 	tp := documentValue["type"].(int)
-	
+
 	sequence, err := d.GetDocumentMaxSequence(parentId, spaceId)
 	if err != nil {
 		sequence = 0
@@ -237,20 +238,18 @@ func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err e
 
 	sequence += 1
 	documentValue["sequence"] = strconv.Itoa(sequence)
-	
+
 	var rs *mysql.ResultSet
 	documentValue["create_time"] = time.Now().Unix()
 	documentValue["update_time"] = time.Now().Unix()
 	rs, err = db.ExecTx(db.AR().Insert(Table_Document_Name, documentValue), tx)
-	
+
 	if err != nil {
 		tx.Rollback()
 		return
 	}
 	id = rs.LastInsertId
-	
-	logs.Error("Run Here =%s", tp)
-	
+
 	// 【修改·上传文件无需新建md】
 	if tp != Document_Type_File {
 		// create document page file
@@ -269,16 +268,16 @@ func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err e
 			return
 		}
 	}
-	
+
 	err = tx.Commit()
 	if err != nil {
 		return
 	}
-	
+
 	userId := documentValue["create_user_id"].(string)
 	// create document log
 	go func(userId, documentId, spaceId string) {
-		_, err := LogDocumentModel.CreateAction(userId, documentId, spaceId)
+		_, err := LogDocumentModel.CreateAction(userId, documentId, spaceId, tp)
 		if err != nil {
 			logs.Error("create document add log err=%s", err.Error())
 		}

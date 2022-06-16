@@ -1,9 +1,10 @@
 package models
 
 import (
+	"time"
+
 	"github.com/phachon/mm-wiki/app/utils"
 	"github.com/snail007/go-activerecord/mysql"
-	"time"
 )
 
 const (
@@ -43,12 +44,19 @@ func (ld *LogDocument) Insert(logDocument map[string]interface{}) (id int64, err
 	return
 }
 
-func (ld *LogDocument) CreateAction(userId string, documentId string, spaceId string) (id int64, err error) {
+func If(condition bool, trueVal, falseVal interface{}) interface{} {
+	if condition {
+		return trueVal
+	}
+	return falseVal
+}
+
+func (ld *LogDocument) CreateAction(userId string, documentId string, spaceId string, tp int) (id int64, err error) {
 	logDocument := map[string]interface{}{
 		"user_id":     userId,
 		"document_id": documentId,
 		"space_id":    spaceId,
-		"comment":     "创建了文档",
+		"comment":     If(tp == Document_Type_File, "上传了文件", "创建了文档"),
 		"action":      LogDocument_Action_Create,
 		"create_time": time.Now().Unix(),
 	}

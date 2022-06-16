@@ -1,7 +1,7 @@
-<div class="container-fluid">
-    <div class="row">{{$pageContent := .page_content}}{{$document := .document}}{{$parentDocuments := .parent_documents}}
+<div class="container-fluid H100">
+    <div class="row H100">{{$pageContent := .page_content}}{{$document := .document}}{{$parentDocuments := .parent_documents}}
 
-        <div class="col-md-12">{{$createUser := .create_user}}{{$editUser := .edit_user}}{{$collectionId := .collection_id}}{{$space := .space}}
+        <div class="col-md-12 H100">{{$createUser := .create_user}}{{$editUser := .edit_user}}{{$collectionId := .collection_id}}{{$space := .space}}
             <div class="panel-body">
                 <div class="row">
                     <div class="col-md-8">
@@ -24,7 +24,10 @@
                             {{else}}
                                 <a class="text text-info" href="/user/info?user_id={{$createUser.user_id}}"> {{$createUser.username}}（{{$createUser.given_name}}） </a>
                             {{end}}
-                            创建于 {{dateFormat $document.create_time "Y/m/d H:i:s"}} ， 被
+                            
+                            {{if eq $document.type "3"}}上传{{else}}创建{{end}}于 
+                            
+                            {{dateFormat $document.create_time "Y/m/d H:i:s"}} ， 被
                             {{if eq $editUser.user_id $.login_user_id}}
                                 <a class="text text-info" href="/system/main/index" target="_parent">{{$editUser.username}}（{{$editUser.given_name}}）<span class="text text-primary"></span> </a>
                             {{else}}
@@ -37,6 +40,13 @@
                     </div>
                     <div class="col-md-4 text-right">
                         <div class="btn-group" role="group" aria-label="...">
+                            <!-- 文件地址及类型 -->
+                            <input type="hidden" id="fileType" value="{{.file_type}}">
+                            <input type="hidden" id="filePath" value="{{.file_path}}">
+                            <input type="hidden" id="fileUrl" value="{{.file_url}}">
+                            <input type="hidden" id="fileExt" value="{{.file_ext}}">
+                            <a type="button" id="clipBtn" class="btn btn-default"><i class="glyphicon glyphicon-paperclip"></i>&nbsp;地址</a>
+
                             {{if eq .is_editor true}}
                                 <a type="button" class="btn btn-default" href="/page/edit?document_id={{$document.document_id}}"><i class="glyphicon glyphicon-pencil"></i>&nbsp;编辑</a>
                             {{end}}
@@ -61,7 +71,7 @@
                 </div>
                 <hr style="margin: 0">
             </div>
-            <div class="panel-body md-view-box" >
+            <div class="panel-body md-view-box H100" >
                 <div class="dir-preview-box">
                     <div class="dir-preview-btn">
                         展开目录
@@ -70,22 +80,84 @@
 
                     </div>
                 </div>
-                <div id="document_page_view" style="padding: 0 10px 10px 10px;">
-                    <textarea style="display:none;">{{$pageContent}}</textarea>
-                </div>
+
+                {{if eq .file_ext "image"}}
+                    <div id="file_img_view" style="padding: 0 10px 10px 10px; min-height: 300px; overflow: auto; display: flex; justify-content: center;">
+                        <img id="imgView" style="border: 1px solid #ccc;" alt="{{.file_path}}" src="{{.file_url}}">
+                    </div>
+                {{else if eq .file_ext "pdf"}}
+                    <iframe frameborder="0" scrolling="auto" type="application/x-google-chrome-pdf"
+                        src="{{.file_url}}" width="100%" height="100%" />
+                {{else if eq .file_ext "word"}}
+                    <div id="viewWord"></div>
+                {{else if eq .file_ext "excel"}}
+                    <div id="viewExcel"></div>
+                {{else}}
+                    <div id="document_page_view" style="padding: 0 10px 10px 10px;">
+                        <textarea style="display:none;">{{$pageContent}}</textarea>
+                    </div>
+                {{end}}
             </div>
         </div>
     </div>
 </div>
 <script src="/static/plugins/md-toc/md-toc.js"></script>
+<script src="/static/plugins/clipboard/clipboard.min.js"></script>
+<script src='/static/plugins/jquery-tipsy/javascripts/jquery.tipsy.js'></script>
+
 <script type="text/javascript">
     Layers.bindIframe("[name='history']", "文档修改历史", "508px", "1000px");
     $("[data-toggle='web-popover']").webuiPopover({animation: 'pop',autoHide:3000});
     if (parent.layoutOpen) {
         parent.layoutOpen();
     }
-    $(function() {
-        editormd.katexURL = {
+    function getFileUrl () {
+        var path = $("#filePath").val();
+        return window.location.origin + "/file/" + path;
+    }
+    var xspr;//  = x_spreadsheet(document.getElementById('viewExcel'));
+
+    // 【增加·文件地址复制功能】
+    function init() {
+        var url = getFileUrl();
+        var clipboard = new ClipboardJS('#clipBtn', {text: url});
+        $('#clipBtn').tipsy({fade: true, gravity: 'n', html: true, title: function () {
+            var url = getFileUrl();
+            return "<div style='text-align: left; color: #ccc'>点击复制文件地址</div>" + url;
+        }});
+        var fileExt = $('#fileExt').val();
+        if (fileExt == "word") loadWord(url);
+        else if (fileExt == "excel") {
+            xspr = x_spreadsheet(document.getElementById('viewExcel'));
+            loadExcel(url);
+        }
+            
+        
+    };
+
+    function loadWord(url) {
+        axios({method: 'get', responseType: 'blob', url: url}).then(({data}) => {
+	      docx.renderAsync(data, document.getElementById("viewWord")) // 渲染到页面
+	    });
+    }
+    function loadExcel(url) {
+        // Spreadsheet.locale('zh-cn', zhCN);
+        // var xspr = x_spreadsheet(document.getElementById('viewExcel'));
+        var params = {method: 'get', responseType: 'arraybuffer', url: url};
+        axios(params).then(res => {
+            var data = new Uint8Array(res.data);
+            var wb = XLSX.read(data, {type:"array"});
+            // 修复原框架一个莫名其妙的Bug，某些Excel文件加载会报错
+            wb.SheetNames = wb.SheetNames.filter(k => wb.Sheets[k]['!ref'] != undefined);
+            data = stox(wb);
+            /* convert to x-spreadsheet form */
+            xspr.loadData(data);
+        });
+    }
+
+    // 【修改·原核心逻辑，仅支持文本型文件查看】
+    function TextViewInit () {
+    	editormd.katexURL = {
             js  : "/static/plugins/editor.md/lib/katex/katex.min",
             css : "/static/plugins/editor.md/lib/katex/katex.min"
         };
@@ -153,5 +225,9 @@
                 pageViewDirToc.hide();
             }
         })
+    }
+    $(function() {
+    	TextViewInit();
+        init();
     });
 </script>

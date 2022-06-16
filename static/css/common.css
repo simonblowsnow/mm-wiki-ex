@@ -599,3 +599,6 @@ mark {
 #tabPanelUpload .file-thumb-progress>.progress, .progress-bar-success{
     height: 18px!important;
 }
+.H100 {
+    height: 100%;
+}

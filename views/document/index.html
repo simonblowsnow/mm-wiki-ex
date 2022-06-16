@@ -41,7 +41,10 @@
         documentsData.push(documentData);
     {{end}}
     Document.ListTree("#dir_tree", documentsData, {{$defaultDocumentId}}, {{.is_editor}}, {{.is_delete}});
-    Layers.bindIframe("[name='create_document']", "创建文档", "345px", "800px");
+
+    // 【修改·弹出框自适应】
+    var sz = Document.GetFrameSize();
+    Layers.bindIframe("[name='create_document']", "创建文档", sz[1], sz[0]);
 </script>
 {{/* markdown显示 */}}
 <iframe class="ui-layout-center" id="mainFrame" name="mainFrame"  width="100%" frameborder="0" scrolling="yes"

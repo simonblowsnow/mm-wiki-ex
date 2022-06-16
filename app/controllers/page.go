@@ -3,22 +3,51 @@ package controllers
 import (
 	"errors"
 	"fmt"
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
+	"regexp"
+	"strings"
+
 	"github.com/astaxie/beego"
 	"github.com/phachon/mm-wiki/app"
 	"github.com/phachon/mm-wiki/app/models"
 	"github.com/phachon/mm-wiki/app/services"
 	"github.com/phachon/mm-wiki/app/utils"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strings"
 
-//	"encoding/json"
+	//	"encoding/json"
 	"github.com/astaxie/beego/logs"
 )
 
 type PageController struct {
 	BaseController
+}
+
+var FILETYPES map[string]string = map[string]string{
+	".png":  "image",
+	".jpg":  "image",
+	".bmp":  "image",
+	".svg":  "image",
+	".ico":  "image",
+	".gif":  "image",
+	".tif":  "image",
+	".iif":  "image",
+	".pcd":  "image",
+	".apng": "image",
+	".jpeg": "image",
+	".webp": "image",
+	".doc":  "word",
+	".ppt":  "office",
+	".xls":  "excel",
+	".docx": "word",
+	".pptx": "office",
+	".xlsx": "excel",
+	".pdf":  "pdf",
+	".zip":  "pkg",
+	".rar":  "pkg",
+	".7z":   "pkg",
+	".rar4": "pkg",
 }
 
 // document page view
@@ -52,8 +81,7 @@ func (this *PageController) View() {
 	if !isVisit {
 		this.ViewError("您没有权限访问该空间！")
 	}
-	
-	logs.Error(document)
+
 	// get parent documents by document
 	parentDocuments, pageFile, err := models.DocumentModel.GetParentDocumentsByDocument(document)
 	if err != nil {
@@ -63,7 +91,7 @@ func (this *PageController) View() {
 	if len(parentDocuments) == 0 {
 		this.ViewError("父文档不存在！")
 	}
-	
+
 	// get document content
 	documentContent, err := utils.Document.GetContentByPageFile(pageFile)
 	if err != nil {
@@ -94,14 +122,26 @@ func (this *PageController) View() {
 
 	collectionId := "0"
 	collection, err := models.CollectionModel.GetCollectionByUserIdTypeAndResourceId(this.UserId, models.Collection_Type_Doc, documentId)
-//	logs.Error("," + "asasas")
-	
+	//	logs.Error("," + "asasas")
+
 	if err != nil {
 		this.ErrorLog("查找文档 " + documentId + " 失败：" + err.Error())
 		this.ViewError("文档查找失败！")
 	}
 	if len(collection) > 0 {
 		collectionId = collection["collection_id"]
+	}
+	// 判断文件类型
+	ext := strings.ToLower(path.Ext(pageFile))
+	fileExt, flag := FILETYPES[ext]
+	if !flag {
+		fileExt = ext
+	}
+	href := this.Ctx.Request.Referer()
+	u, _ := url.Parse(href)
+	host := "http://" + u.Host
+	if href[:5] == "https" {
+		host = "https://" + u.Host
 	}
 
 	this.Data["is_editor"] = isEditor
@@ -112,7 +152,13 @@ func (this *PageController) View() {
 	this.Data["collection_id"] = collectionId
 	this.Data["page_content"] = documentContent
 	this.Data["parent_documents"] = parentDocuments
+	this.Data["file_type"] = document["type"]
+	this.Data["file_path"] = pageFile
+	this.Data["file_ext"] = fileExt
+	this.Data["file_url"] = host + "/file/" + pageFile
+
 	this.viewLayout("page/view", "document_page")
+	//
 }
 
 // page edit
@@ -131,7 +177,7 @@ func (this *PageController) Edit() {
 	if len(document) == 0 {
 		this.ViewError("文档不存在！")
 	}
-	
+
 	spaceId := document["space_id"]
 	space, err := models.SpaceModel.GetSpaceBySpaceId(spaceId)
 	if err != nil {
@@ -153,7 +199,7 @@ func (this *PageController) Edit() {
 		this.ErrorLog("查找父文档失败：" + err.Error())
 		this.ViewError("查找父文档失败！")
 	}
-	
+
 	// get document content
 	documentContent, err := utils.Document.GetContentByPageFile(pageFile)
 	if err != nil {
