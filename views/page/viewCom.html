@@ -1,0 +1,118 @@
+
+<div class="panel-body md-view-box H100" >
+    <!-- 文件地址及类型 -->
+    <input type="hidden" id="fileType" value="{{.file_type}}">
+    <input type="hidden" id="filePath" value="{{.file_path}}">
+    <input type="hidden" id="fileUrl" value="{{.file_url}}">
+    <input type="hidden" id="fileExt" value="{{.file_ext}}">
+
+    <!-- <div class="dir-preview-box" style="display: none;">
+        <div class="dir-preview-btn">
+            展开目录
+        </div>
+        <div class="page-view-dir-toc" id="page-view-dir-toc">
+
+        </div>
+    </div> -->
+    
+    <div class="H100" style="">
+        <!-- image -->
+        {{if eq .file_ext "image"}}
+            <div id="file_img_view" style="padding: 0 10px 10px 10px; min-height: 300px; overflow: auto; display: flex; justify-content: center;">
+                <img id="imgView" style="border: 1px solid #ccc;" alt="file_path" src="{{.file_url}}">
+            </div>
+        {{else if eq .file_ext "pdf"}}
+            <iframe frameborder="0" scrolling="auto" type="application/x-google-chrome-pdf" src="{{.file_url}}" width="100%" height="100%" />
+        {{else if eq .file_ext "word"}}
+            <div id="viewWord"></div>
+        {{else if eq .file_ext "excel"}}
+            <div id="viewExcel"></div>
+        {{else if eq .file_ext "ppt"}}
+            <input id="uploadFileInput" type="file" />
+            <div id="viewPpt"></div>
+        {{end}}
+    </div>
+    
+    
+</div>
+
+<script type="text/javascript" src="/static/js/modules/view.js"></script>
+
+<script type="text/javascript">
+    var xspr; // = x_spreadsheet(document.getElementById('viewExcel'));
+
+    function init() {
+        // var tileType = window.location.search("tp");
+        // console.log(tileType);
+        // alert(tileType);
+
+        // 此处获取url前缀方式与Image和PDF文件类型不同
+        var url = getFileUrl();
+        var fileExt = $('#fileExt').val();
+        if (fileExt == "word") {
+            loadWord(url);
+        } else if (fileExt == "excel") {
+            xspr = x_spreadsheet(document.getElementById('viewExcel'));
+            loadExcel(url);
+        } else if (fileExt == "ppt") {
+            loadPPT(url);
+        } else {
+            
+        } 
+    }
+
+    function getFileUrl () {
+        var path = $("#filePath").val();
+        return window.location.origin + "/file/" + path;
+    }
+    function loadWord(url) {
+        axios({method: 'get', responseType: 'blob', url: url}).then(({data}) => {
+	      docx.renderAsync(data, document.getElementById("viewWord")) // 渲染到页面
+	    });
+    }
+    function loadExcel(url) {
+        // Spreadsheet.locale('zh-cn', zhCN);
+        // var xspr = x_spreadsheet(document.getElementById('viewExcel'));
+        var params = {method: 'get', responseType: 'arraybuffer', url: url};
+        axios(params).then(res => {
+            var data = new Uint8Array(res.data);
+            var wb = XLSX.read(data, {type:"array"});
+            // 修复原框架一个莫名其妙的Bug，某些Excel文件加载会报错
+            wb.SheetNames = wb.SheetNames.filter(k => wb.Sheets[k]['!ref'] != undefined);
+            data = stox(wb);
+            /* convert to x-spreadsheet form */
+            xspr.loadData(data);
+        });
+    }
+    function loadPPT(url) {
+        $("#viewPpt").pptxToHtml({
+            pptxFileUrl: "Sample_12.pptx",
+            fileInputId: "uploadFileInput",
+            slideMode: false,
+            keyBoardShortCut: false,
+            slideModeConfig: {  //on slide mode (slideMode: true)
+                first: 1, 
+                nav: false, /** true,false : show or not nav buttons*/
+                navTxtColor: "white", /** color */
+                navNextTxt:"&#8250;", //">"
+                navPrevTxt: "&#8249;", //"<"
+                showPlayPauseBtn: false,/** true,false */
+                keyBoardShortCut: false, /** true,false */
+                showSlideNum: false, /** true,false */
+                showTotalSlideNum: false, /** true,false */
+                autoSlide: false, /** false or seconds (the pause time between slides) , F8 to active(keyBoardShortCut: true) */
+                randomAutoSlide: false, /** true,false ,autoSlide:true */ 
+                loop: false,  /** true,false */
+                background: "black", /** false or color*/
+                transition: "default", /** transition type: "slid","fade","default","random" , to show transition efects :transitionTime > 0.5 */
+                transitionTime: 1 /** transition time in seconds */
+            }
+        });
+    }
+
+    
+    $(function() {
+        init();
+    });
+
+</script>

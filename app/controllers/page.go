@@ -38,10 +38,10 @@ var FILETYPES map[string]string = map[string]string{
 	".jpeg": "image",
 	".webp": "image",
 	".doc":  "word",
-	".ppt":  "office",
+	".ppt":  "ppt",
 	".xls":  "excel",
 	".docx": "word",
-	".pptx": "office",
+	".pptx": "ppt",
 	".xlsx": "excel",
 	".pdf":  "pdf",
 	".zip":  "pkg",
@@ -92,12 +92,23 @@ func (this *PageController) View() {
 		this.ViewError("父文档不存在！")
 	}
 
-	// get document content
-	documentContent, err := utils.Document.GetContentByPageFile(pageFile)
-	if err != nil {
-		this.ErrorLog("查找文档 " + documentId + " 失败：" + err.Error())
-		this.ViewError("文档不存在！")
+	// 判断文件类型
+	ext := strings.ToLower(path.Ext(pageFile))
+	fileExt, flag := FILETYPES[ext]
+	documentContent := ""
+	// 已识别的非文本标准格式文件，不读其内容
+	if !flag {
+		fileExt = ext
+		// get document content
+		dc, err := utils.Document.GetContentByPageFile(pageFile)
+		if err != nil {
+			this.ErrorLog("查找文档 " + documentId + " 失败：" + err.Error())
+			this.ViewError("文档不存在！")
+			return
+		}
+		documentContent = dc
 	}
+	logs.Error("Test Content")
 
 	// get edit user and create user
 	users, err := models.UserModel.GetUsersByUserIds([]string{document["create_user_id"], document["edit_user_id"]})
@@ -131,12 +142,8 @@ func (this *PageController) View() {
 	if len(collection) > 0 {
 		collectionId = collection["collection_id"]
 	}
-	// 判断文件类型
-	ext := strings.ToLower(path.Ext(pageFile))
-	fileExt, flag := FILETYPES[ext]
-	if !flag {
-		fileExt = ext
-	}
+
+	// 拼接文件网络地址
 	href := this.Ctx.Request.Referer()
 	u, _ := url.Parse(href)
 	host := "http://" + u.Host
@@ -156,9 +163,9 @@ func (this *PageController) View() {
 	this.Data["file_path"] = pageFile
 	this.Data["file_ext"] = fileExt
 	this.Data["file_url"] = host + "/file/" + pageFile
+	this.Data["document_id"] = documentId
 
 	this.viewLayout("page/view", "document_page")
-	//
 }
 
 // page edit
@@ -578,4 +585,37 @@ func sendEmail(documentId string, username string, comment string, url string) e
 	}
 	// start send email
 	return utils.Email.Send(emailConfig, emails, "文档更新通知", body)
+}
+
+// ==========================================通用View==========================================
+// document page view common, 因去掉了繁琐的验证，可能被用于非法访问
+func (this *PageController) ViewCom() {
+
+	documentId := this.GetString("document_id", "")
+	document, _ := models.DocumentModel.GetDocumentByDocumentId(documentId)
+	// get parent documents by document
+	parentDocuments, pageFile, _ := models.DocumentModel.GetParentDocumentsByDocument(document)
+
+	// 判断文件类型
+	ext := strings.ToLower(path.Ext(pageFile))
+	fileExt, flag := FILETYPES[ext]
+	if !flag {
+		fileExt = ext
+	}
+	href := this.Ctx.Request.Referer()
+	u, _ := url.Parse(href)
+	host := "http://" + u.Host
+	if href[:5] == "https" {
+		host = "https://" + u.Host
+	}
+
+	this.Data["document"] = document
+	this.Data["parent_documents"] = parentDocuments
+	this.Data["file_type"] = document["type"]
+	this.Data["file_path"] = pageFile
+	this.Data["file_ext"] = fileExt
+	this.Data["file_url"] = host + "/file/" + pageFile
+
+	this.viewLayout("page/viewCom", "document_view")
+	//
 }

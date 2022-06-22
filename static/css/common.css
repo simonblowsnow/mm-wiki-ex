@@ -602,3 +602,25 @@ mark {
 .H100 {
     height: 100%;
 }
+
+
+@media screen and (max-width: 830px) {
+    .page-view-content{
+        height: calc(100% - 165px);
+    }    
+}
+@media screen and (min-width: 830px) {
+    .page-view-content{
+        height: calc(100% - 150px);
+    }    
+}
+@media screen and (min-width: 1010px) {
+    .page-view-content{
+        height: calc(100% - 131px);
+    }    
+}
+@media screen and (min-width: 1270px) {
+    .page-view-content{
+        height: calc(100% - 116px);
+    }    
+}

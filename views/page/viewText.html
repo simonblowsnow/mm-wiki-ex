@@ -1,0 +1,39 @@
+
+<div class="panel-body md-view-box H100" >
+    <div class="dir-preview-box">
+        <div class="dir-preview-btn">
+            展开目录
+        </div>
+        <div class="page-view-dir-toc" id="page-view-dir-toc">
+
+        </div>
+    </div>
+
+    {{if eq .file_ext "image"}}
+        <div id="file_img_view" style="padding: 0 10px 10px 10px; min-height: 300px; overflow: auto; display: flex; justify-content: center;">
+            <img id="imgView" style="border: 1px solid #ccc;" alt="{{.file_path}}" src="{{.file_url}}">
+        </div>
+    {{else if eq .file_ext "pdf"}}
+        <iframe frameborder="0" scrolling="auto" type="application/x-google-chrome-pdf"
+            src="{{.file_url}}" width="100%" height="100%" />
+    {{else if eq .file_ext "word"}}
+        <div id="viewWord"></div>
+    {{else if eq .file_ext "excel"}}
+        <div id="viewExcel"></div>
+    {{else}}
+        <div id="document_page_view" style="padding: 0 10px 10px 10px;">
+            <textarea style="display:none;"></textarea>
+        </div>
+    {{end}}
+    
+</div>
+<script type="text/javascript" src="/static/js/modules/docEx.js"></script>
+<script type="text/javascript">
+
+    
+    $(function() {
+    	TextViewInit();
+        init();
+    });
+
+</script>
