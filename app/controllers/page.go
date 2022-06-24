@@ -25,29 +25,77 @@ type PageController struct {
 }
 
 var FILETYPES map[string]string = map[string]string{
-	".png":  "image",
-	".jpg":  "image",
-	".bmp":  "image",
-	".svg":  "image",
-	".ico":  "image",
-	".gif":  "image",
-	".tif":  "image",
-	".iif":  "image",
-	".pcd":  "image",
-	".apng": "image",
-	".jpeg": "image",
-	".webp": "image",
-	".doc":  "word",
-	".ppt":  "ppt",
-	".xls":  "excel",
-	".docx": "word",
-	".pptx": "ppt",
-	".xlsx": "excel",
-	".pdf":  "pdf",
-	".zip":  "pkg",
-	".rar":  "pkg",
-	".7z":   "pkg",
-	".rar4": "pkg",
+	".png":   "image",
+	".jpg":   "image",
+	".bmp":   "image",
+	".svg":   "image",
+	".ico":   "image",
+	".gif":   "image",
+	".tif":   "image",
+	".iif":   "image",
+	".pcd":   "image",
+	".apng":  "image",
+	".jpeg":  "image",
+	".webp":  "image",
+	".doc":   "word",
+	".ppt":   "ppt",
+	".xls":   "excel",
+	".docx":  "word",
+	".pptx":  "ppt",
+	".xlsx":  "excel",
+	".pdf":   "pdf",
+	".zip":   "pkg",
+	".rar":   "pkg",
+	".7z":    "pkg",
+	".rar4":  "pkg",
+	".mp4":   "video",
+	".3gp":   "video",
+	".avi":   "video",
+	".wmv":   "video",
+	".ogv":   "video",
+	".flv":   "video",
+	".mgp":   "video",
+	".mkv":   "video",
+	".mov":   "video",
+	".m4v":   "video",
+	".awf":   "video",
+	".asx":   "video",
+	".webm":  "video",
+	".rmvb":  "video",
+	".rm":    "video",
+	".htm":   "code",
+	".html":  "code",
+	".java":  "code",
+	".c":     "code",
+	".h":     "code",
+	".cc":    "code",
+	".cpp":   "code",
+	".cxx":   "code",
+	".py":    "code",
+	".js":    "code",
+	".css":   "code",
+	".sql":   "code",
+	".php":   "code",
+	".xml":   "code",
+	".json":  "code",
+	".jsp":   "code",
+	".asp":   "code",
+	".sh":    "code",
+	".bat":   "code",
+	".cmd":   "code",
+	".ini":   "code",
+	".vbs":   "code",
+	".yaml":  "code",
+	".swift": "code",
+	".scss":  "code",
+	".scala": "code",
+	".ruby":  "code",
+	".r":     "code",
+	".jl":    "code",
+	".cs":    "code",
+	".frm":   "code",
+	".less":  "code",
+	".go":    "code",
 }
 
 // document page view
@@ -599,9 +647,15 @@ func (this *PageController) ViewCom() {
 	// 判断文件类型
 	ext := strings.ToLower(path.Ext(pageFile))
 	fileExt, flag := FILETYPES[ext]
-	if !flag {
-		fileExt = ext
+	documentContent := ""
+	if !flag || fileExt == "code" {
+		if !flag {
+			fileExt = ext
+		}
+		dc, _ := utils.Document.GetContentByPageFile(pageFile)
+		documentContent = dc
 	}
+
 	href := this.Ctx.Request.Referer()
 	u, _ := url.Parse(href)
 	host := "http://" + u.Host
@@ -615,7 +669,7 @@ func (this *PageController) ViewCom() {
 	this.Data["file_path"] = pageFile
 	this.Data["file_ext"] = fileExt
 	this.Data["file_url"] = host + "/file/" + pageFile
-
+	this.Data["page_content"] = documentContent
 	this.viewLayout("page/viewCom", "document_view")
 	//
 }

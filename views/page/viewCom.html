@@ -28,24 +28,27 @@
         {{else if eq .file_ext "excel"}}
             <div id="viewExcel"></div>
         {{else if eq .file_ext "ppt"}}
-            <input id="uploadFileInput" type="file" />
-            <div id="viewPpt"></div>
+            <div id="viewPPT"></div>
+        {{else if eq .file_ext "code"}}
+            <pre><code>{{.page_content}}</code></pre>
+        {{else if eq .file_ext "video"}}
+            <div style="padding: 0 10px 10px 10px; min-height: 400px; overflow: auto; display: flex; justify-content: center;">
+                <video id="my-player" class="video-js" controls preload="auto" poster="//vjs.zencdn.net/v/oceans.png" data-setup='{}'>
+                    <source src="{{.file_url}}" ></source>
+                </video>
+            </div>
         {{end}}
     </div>
-    
     
 </div>
 
 <script type="text/javascript" src="/static/js/modules/view.js"></script>
 
 <script type="text/javascript">
+    hljs.highlightAll();
     var xspr; // = x_spreadsheet(document.getElementById('viewExcel'));
 
     function init() {
-        // var tileType = window.location.search("tp");
-        // console.log(tileType);
-        // alert(tileType);
-
         // 此处获取url前缀方式与Image和PDF文件类型不同
         var url = getFileUrl();
         var fileExt = $('#fileExt').val();
@@ -85,9 +88,8 @@
         });
     }
     function loadPPT(url) {
-        $("#viewPpt").pptxToHtml({
-            pptxFileUrl: "Sample_12.pptx",
-            fileInputId: "uploadFileInput",
+        $("#viewPPT").pptxToHtml({
+            pptxFileUrl: url,
             slideMode: false,
             keyBoardShortCut: false,
             slideModeConfig: {  //on slide mode (slideMode: true)

@@ -2,14 +2,14 @@ package controllers
 
 import (
 	"fmt"
-	"github.com/phachon/mm-wiki/app/services"
+	"path/filepath"
 	"regexp"
 	"strings"
-	"path/filepath"
-	
+
+	"github.com/phachon/mm-wiki/app/services"
+
 	"github.com/phachon/mm-wiki/app/models"
 	"github.com/phachon/mm-wiki/app/utils"
-//	"github.com/astaxie/beego/logs"
 )
 
 type DocumentController struct {
@@ -29,7 +29,7 @@ func (this *DocumentController) Index() {
 		this.ErrorLog("查找空间文档 " + documentId + " 失败：" + err.Error())
 		this.ViewError("查找文档失败！")
 	}
-	
+
 	if len(document) == 0 {
 		this.ViewError("文档不存在！")
 	}
@@ -64,7 +64,7 @@ func (this *DocumentController) Index() {
 		this.ErrorLog("查找文档 " + documentId + " 所在空间失败：" + err.Error())
 		this.ViewError("查找文档失败！")
 	}
-	
+
 	// get space privilege
 	_, isEditor, isDelete := this.GetDocumentPrivilege(space)
 
@@ -132,7 +132,7 @@ func (this *DocumentController) Add() {
 
 // save document
 func (this *DocumentController) Save() {
-		
+
 	if !this.IsPost() {
 		this.ViewError("请求方式有误！", "/main/index")
 	}
@@ -498,14 +498,14 @@ func (this *DocumentController) Delete() {
 // 注·九成以上代码来自于Save()方法
 // upload file
 func (this *DocumentController) Upload() {
-	
+
 	if !this.IsPost() {
 		this.ViewError("请求方式有误！", "/main/index")
 	}
 	spaceId := strings.TrimSpace(this.GetString("space_id", "0"))
 	parentId := strings.TrimSpace(this.GetString("parent_id", "0"))
-	
-	if spaceId == "0" || parentId == "0" { 
+
+	if spaceId == "0" || parentId == "0" {
 		this.jsonError("没有选择空间或父文档！")
 	}
 	space, err := models.SpaceModel.GetSpaceBySpaceId(spaceId)
@@ -516,13 +516,13 @@ func (this *DocumentController) Upload() {
 	if len(space) == 0 {
 		this.jsonError("空间不存在！")
 	}
-	
+
 	// check space document privilege
 	_, isEditor, _ := this.GetDocumentPrivilege(space)
 	if !isEditor {
 		this.jsonError("您没有权限在该空间下创建文档！")
 	}
-	d := models.DocumentModel 
+	d := models.DocumentModel
 	parentDocument, err := d.GetDocumentByDocumentId(parentId)
 	if err != nil {
 		this.ErrorLog("创建保存文档失败：" + err.Error())
@@ -534,7 +534,7 @@ func (this *DocumentController) Upload() {
 	if parentDocument["type"] != fmt.Sprintf("%d", models.Document_Type_Dir) {
 		this.jsonError("父文档不是目录！")
 	}
-	
+
 	// check document name
 	document, err := d.GetDocumentByNameParentIdAndSpaceId("Readme", parentId, spaceId, 1)
 	if err != nil {
@@ -544,14 +544,14 @@ func (this *DocumentController) Upload() {
 	if len(document) != 0 {
 		this.jsonError("该文档名称已经存在！")
 	}
-	
+
 	f, h, err := this.GetFile("file1")
 	if err != nil {
 		this.jsonError("获取上传文件失败！")
 	}
 	defer f.Close()
-	filename := h.Filename	
-	
+	filename := h.Filename
+
 	// 获取文件目录绝对路径
 	doc := map[string]string{
 		"parent_id": parentId, "space_id": spaceId, "name": "", "type": "1",
@@ -560,10 +560,10 @@ func (this *DocumentController) Upload() {
 	_, pageFile, err := d.GetParentDocumentsByDocument(doc)
 	absFilePath := utils.Document.GetAbsPageFileByPageFile(pageFile)
 	folder, _ := filepath.Split(absFilePath)
-	
+
 	// TODO：是否需要d.lock.Lock()？
-	this.SaveToFile("file1", folder + filename)
-	
+	this.SaveToFile("file1", folder+filename)
+
 	// 入库
 	insertDocument := map[string]interface{}{
 		"parent_id":      parentId,
@@ -574,7 +574,7 @@ func (this *DocumentController) Upload() {
 		"create_user_id": this.UserId,
 		"edit_user_id":   this.UserId,
 	}
-	
+
 	documentId, err := models.DocumentModel.Insert(insertDocument)
 	if err != nil {
 		this.ErrorLog("上传文档失败：" + err.Error())

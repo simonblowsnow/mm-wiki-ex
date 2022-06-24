@@ -38,6 +38,11 @@
                             <a onclick="Page.attachment({{$document.document_id}})">&nbsp<i class="fa fa-paperclip item"></i> 查看附件</a>
                         </p>
                     </div>
+
+                    <!-- 格式判定 -->
+                    {{$comType := 0}}
+                    {{if eq .file_ext "image" "pdf" "word" "excel" "ppt" "video" "code"}}{{$comType = 1}}{{end}}
+
                     <div class="col-md-4 text-right">
                         <div class="btn-group" role="group" aria-label="...">
                             <!-- 文件地址及类型 -->
@@ -45,7 +50,9 @@
                             <input type="hidden" id="filePath" value="{{.file_path}}">
                             <input type="hidden" id="fileUrl" value="{{.file_url}}">
                             <input type="hidden" id="fileExt" value="{{.file_ext}}">
-                            <a type="button" id="clipBtn" class="btn btn-default"><i class="glyphicon glyphicon-paperclip"></i>&nbsp;地址</a>
+                            <!-- Trigger -->
+
+                            <a type="button" id="clipBtn" data-clipboard-text="Just" class="btn btn-default"><i class="glyphicon glyphicon-paperclip"></i>&nbsp;地址</a>
 
                             {{if eq .is_editor true}}
                                 <a type="button" class="btn btn-default" href="/page/edit?document_id={{$document.document_id}}"><i class="glyphicon glyphicon-pencil"></i>&nbsp;编辑</a>
@@ -66,24 +73,28 @@
                                     </ul>
                                 </div>
                             {{end}}
+                            <!-- HTML文件支持直接在新窗口打开     -->
+                            <a type="button" id="visit" style="display: none" class="btn btn-default"><i class="glyphicon glyphicon-link"></i>&nbsp;打开</a>
                         </div>
                     </div>
                 </div>
                 <hr style="margin: 0">
             </div>
-
+            
             <div class="panel-body md-view-box page-view-content" >
                 <div class="dir-preview-box">
                     <div class="dir-preview-btn">
+                        {{if eq $comType 0 }}
                         展开目录
+                        {{end}}
                     </div>
                     <div class="page-view-dir-toc" id="page-view-dir-toc">
 
                     </div>
                 </div>
                 
-                {{if eq .file_ext "image" "pdf" "word" "excel" "ppt"}}
-                    <iframe frameborder="0" scrolling="auto" frameborder="0" src="/page/viewCom?document_id={{.document_id}}" width="100%" height="100%" />
+                {{if eq $comType 1}}
+                    <iframe frameborder="0" scrolling="auto" frameborder="0" src="/page/viewCom?document_id={{.document_id}}" width="100%" height="100%" /></iframe>
                     
                 {{else}}
                     <div id="document_page_view" style="padding: 0 10px 10px 10px;">
@@ -96,28 +107,41 @@
     </div>
 </div>
 <script src="/static/plugins/md-toc/md-toc.js"></script>
-<script src="/static/plugins/clipboard/clipboard.min.js"></script>
 <script src='/static/plugins/jquery-tipsy/javascripts/jquery.tipsy.js'></script>
+<script src="/static/plugins/clipboard/clipboard.min.js"></script>
 <script type="text/javascript" src="/static/js/modules/view.js"></script>
+
 
 <script type="text/javascript">
     Layers.bindIframe("[name='history']", "文档修改历史", "508px", "1000px");
-    $("[data-toggle='web-popover']").webuiPopover({animation: 'pop',autoHide:3000});
+    $("[data-toggle='web-popover']").webuiPopover({animation: 'pop', autoHide:3000});
     if (parent.layoutOpen) {
         parent.layoutOpen();
     }
-
+    
     // 【增加·文件地址复制功能】
     function init() {
+        var fileExt = $("#fileExt").val();
         var url = getFileUrl();
-        var clipboard = new ClipboardJS('#clipBtn', {text: url});
+        // 复制地址
+        $("#clipBtn").attr("data-clipboard-text", url);
+        var clipboard = new ClipboardJS('#clipBtn');
         $('#clipBtn').tipsy({fade: true, gravity: 'n', html: true, title: function () {
             var url = getFileUrl();
             return "<div style='text-align: left; color: #ccc'>点击复制文件地址</div>" + url;
         }});
-        if ($("#document_page_view").length > 0) TextViewInit();       
+        
+        // html文件则显示打开按钮
+        var ps = url.split(".");
+        if (ps.length > 0 && (ps[ps.length - 1] == "html" || ps[ps.length - 1] == "htm")) {
+            $("#visit").show();
+            $("#visit").on("click", function () {
+                window.open(url);
+            });
+        }
+        
+        if ($("#document_page_view").length > 0 && fileExt != ".html") TextViewInit();       
     };
-
 
     $(function() {
         init();

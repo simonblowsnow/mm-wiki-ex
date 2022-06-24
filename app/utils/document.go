@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-//		"github.com/astaxie/beego/logs"
+	// "github.com/astaxie/beego/logs"
 )
 
 var Document = NewDocument("./data", "./data/markdowns")
@@ -19,7 +19,7 @@ const (
 const (
 	Document_Type_Page = 1
 	Document_Type_Dir  = 2
-	Document_Type_File  = 3
+	Document_Type_File = 3
 )
 
 func NewDocument(documentAbsDir string, markdownAbsDir string) *document {
@@ -72,7 +72,7 @@ func (d *document) Create(pageFile string) error {
 	absFilePath := d.GetAbsPageFileByPageFile(pageFile)
 	absDir := filepath.Dir(absFilePath)
 	err := os.MkdirAll(absDir, 0777)
-	
+
 	if err != nil {
 		d.lock.Unlock()
 		return err
@@ -129,10 +129,10 @@ func (d *document) Update(oldPageFile string, name string, content string, docTy
 	}
 	if nameIsChange {
 		filePath := filepath.Dir(absOldPageFile)
-		if docType == Document_Type_Page {
-			err = os.Rename(absOldPageFile, filePath+"/"+name+Document_Page_Suffix)
-		} else {
+		if docType == Document_Type_Dir {
 			err = os.Rename(filePath, filepath.Dir(filePath)+"/"+name)
+		} else {
+			err = os.Rename(absOldPageFile, filePath+"/"+name+Document_Page_Suffix)
 		}
 		if err != nil {
 			return
@@ -166,11 +166,12 @@ func (d *document) Delete(path string, docType int) error {
 	if !ok {
 		return nil
 	}
-	if docType == Document_Type_Page {
-		return os.Remove(absPageFile)
-	}
 
-	return os.RemoveAll(filepath.Dir(absPageFile))
+	if docType == Document_Type_Dir {
+		return os.RemoveAll(filepath.Dir(absPageFile))
+
+	}
+	return os.Remove(absPageFile)
 }
 
 func (d *document) DeleteSpace(name string) error {
@@ -194,10 +195,10 @@ func (d *document) Move(movePath string, targetPath string, docType int) error {
 	absOldPageFile := d.GetAbsPageFileByPageFile(movePath)
 	absTargetPageFile := d.GetAbsPageFileByPageFile(targetPath)
 
-	if docType == Document_Type_Page {
-		return os.Rename(absOldPageFile, absTargetPageFile)
+	if docType == Document_Type_Dir {
+		return os.Rename(filepath.Dir(absOldPageFile), filepath.Dir(absTargetPageFile))
 	}
-	return os.Rename(filepath.Dir(absOldPageFile), filepath.Dir(absTargetPageFile))
+	return os.Rename(absOldPageFile, absTargetPageFile)
 }
 
 // delete document attachment
@@ -208,11 +209,13 @@ func (d *document) DeleteAttachment(attachments []map[string]string) error {
 	if len(attachments) == 0 {
 		return nil
 	}
+
 	// delete attachment file
 	for _, attachment := range attachments {
 		if len(attachment) == 0 || attachment["path"] == "" {
 			continue
 		}
+
 		file := filepath.Join(d.DocumentAbsDir, attachment["path"])
 		_ = os.Remove(file)
 	}
