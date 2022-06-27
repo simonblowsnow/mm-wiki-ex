@@ -23,6 +23,9 @@ import (
 type PageController struct {
 	BaseController
 }
+type DataController struct {
+	beego.Controller
+}
 
 var FILETYPES map[string]string = map[string]string{
 	".png":   "image",
@@ -672,4 +675,12 @@ func (this *PageController) ViewCom() {
 	this.Data["page_content"] = documentContent
 	this.viewLayout("page/viewCom", "document_view")
 	//
+}
+
+// 提供压缩包文件预览功能	DataController PageController
+func (this *DataController) ViewPkg() {
+	pageFile := this.GetString("filePath", "")
+	logs.Error(pageFile)
+	this.Data["json"] = [2]string{"Hello", "Word"}
+	this.ServeJSON()
 }

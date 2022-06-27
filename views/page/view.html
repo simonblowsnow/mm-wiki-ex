@@ -95,7 +95,8 @@
                 
                 {{if eq $comType 1}}
                     <iframe frameborder="0" scrolling="auto" frameborder="0" src="/page/viewCom?document_id={{.document_id}}" width="100%" height="100%" /></iframe>
-                    
+                {{else if eq .file_ext "pkg"}}
+                    <div id="fileView">111111</div>
                 {{else}}
                     <div id="document_page_view" style="padding: 0 10px 10px 10px;">
                         <textarea style="display:none;">{{$pageContent}}</textarea>
@@ -122,6 +123,7 @@
     // 【增加·文件地址复制功能】
     function init() {
         var fileExt = $("#fileExt").val();
+        var filePath = $("#filePath").val();
         var url = getFileUrl();
         // 复制地址
         $("#clipBtn").attr("data-clipboard-text", url);
@@ -137,6 +139,14 @@
             $("#visit").show();
             $("#visit").on("click", function () {
                 window.open(url);
+            });
+        }
+
+        if ($('#fileView').length > 0) {
+            var serve = '/ViewPkg?filePath=' + filePath;
+            serve = "http://10.101.7.56:8080/jqueryFileTree";
+            $('#fileView').fileTree({ root: '/', script: serve }, function(file) {
+                alert(file);
             });
         }
         

@@ -1,13 +1,14 @@
 package main
 
 import (
+	"html/template"
+	"net/http"
+
 	"github.com/astaxie/beego"
 	"github.com/phachon/mm-wiki/app"
 	"github.com/phachon/mm-wiki/app/controllers"
 	systemControllers "github.com/phachon/mm-wiki/app/modules/system/controllers"
 	"github.com/phachon/mm-wiki/app/utils"
-	"html/template"
-	"net/http"
 )
 
 func init() {
@@ -21,6 +22,9 @@ func initRouter() {
 
 	beego.Router("/", &controllers.MainController{}, "*:Index")
 	beego.Router("/author", &controllers.AuthorController{}, "*:Index")
+	// 新增纯Api方法
+	beego.Router("/ViewPkg", &controllers.DataController{}, "POST:ViewPkg")
+
 	beego.AutoRouter(&controllers.AuthorController{})
 	beego.AutoRouter(&controllers.MainController{})
 	beego.AutoRouter(&controllers.SpaceController{})
