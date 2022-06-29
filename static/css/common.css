@@ -624,3 +624,26 @@ mark {
         height: calc(100% - 116px);
     }    
 }
+.loading {
+    background: url(../images/throbber.gif) center center no-repeat;
+}
+
+.jstree-ocl {
+    width: 21px !important;
+    height: 21px !important;
+}
+.jstree-open>.jstree-ocl{
+    background-position: -105px -42px !important;
+    background-image: url(../images/metro.png) !important;   
+}
+.jstree-closed>.jstree-ocl{
+    background-position: -126px -21px !important;
+    background-image: url(../images/metro.png) !important;   
+}
+
+
+.jstree-node {
+    /* background-image: url(../images/metro.png) !important;
+    background-position: -105px -42px !important; */
+    /* background: url(../images/line_conn.png) 0 0 repeat-y !important; */
+}

@@ -1,8 +1,13 @@
 package controllers
 
 import (
+	"archive/tar"
+	"archive/zip"
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
@@ -15,6 +20,8 @@ import (
 	"github.com/phachon/mm-wiki/app/models"
 	"github.com/phachon/mm-wiki/app/services"
 	"github.com/phachon/mm-wiki/app/utils"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 
 	//	"encoding/json"
 	"github.com/astaxie/beego/logs"
@@ -25,6 +32,15 @@ type PageController struct {
 }
 type DataController struct {
 	beego.Controller
+}
+
+type FileList struct {
+	Names []string `json: names`
+	Types []int    `json: types`
+}
+type FileInfo struct {
+	Name     string `json: name`
+	FileType int    `json: type`
 }
 
 var FILETYPES map[string]string = map[string]string{
@@ -680,7 +696,87 @@ func (this *PageController) ViewCom() {
 // 提供压缩包文件预览功能	DataController PageController
 func (this *DataController) ViewPkg() {
 	pageFile := this.GetString("filePath", "")
-	logs.Error(pageFile)
-	this.Data["json"] = [2]string{"Hello", "Word"}
+	absPath := utils.Document.GetAbsPageFileByPageFile(pageFile)
+	ext := strings.ToLower(path.Ext(pageFile))
+
+	var files FileList
+	var err error
+	if ext == ".zip" {
+		files, err = GetZipFileList(absPath)
+	} else if ext == ".tar" {
+		files, err = GetTarFileList(absPath)
+	} else if ext == ".gz" {
+		files, err = GetZipFileList(absPath)
+	}
+
+	if err == nil {
+		this.Data["json"] = files
+	}
 	this.ServeJSON()
+}
+
+//解决文件名乱码问题，如果标示位是0，则是默认的本地编码，默认为gbk
+func GetFileNameUtf8(file *zip.File) string {
+	if file.Flags == 0 {
+		i := bytes.NewReader([]byte(file.Name))
+		decoder := transform.NewReader(i, simplifiedchinese.GB18030.NewDecoder())
+		content, _ := ioutil.ReadAll(decoder)
+		return string(content)
+	} else {
+		return file.Name
+	}
+}
+
+// ========================================================================================
+// zip文件，仅获取文件列表
+func GetZipFileList(zipFile string) (FileList, error) {
+	zr, err := zip.OpenReader(zipFile)
+	defer zr.Close()
+	if err != nil {
+		return FileList{}, err
+	}
+
+	names := make([]string, len(zr.File))
+	types := make([]int, len(zr.File))
+	// TODO：此处遇到node_modules这样的极端目录是否影响效率？
+	for i, file := range zr.File {
+		fpath := GetFileNameUtf8(file)
+		names[i] = fpath
+		types[i] = 0
+		if file.FileInfo().IsDir() {
+			types[i] = 1
+		}
+	}
+	fs := FileList{Names: names, Types: types}
+	return fs, nil
+}
+
+func GetTarFileList(tarFile string) (FileList, error) {
+	nf := FileList{}
+	fr, err := os.Open(tarFile)
+	if err != nil {
+		return nf, err
+	}
+	defer fr.Close()
+
+	names := make([]string, 1)
+	types := make([]int, 1)
+	tr := tar.NewReader(fr)
+	for {
+		h, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nf, err
+		}
+		isDir := 0
+		if h.FileInfo().IsDir() {
+			isDir = 1
+		}
+		logs.Error(isDir)
+		logs.Error(h.Name)
+	}
+	fs := FileList{Names: names, Types: types}
+	return fs, nil
 }

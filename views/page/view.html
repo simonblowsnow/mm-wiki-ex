@@ -96,7 +96,12 @@
                 {{if eq $comType 1}}
                     <iframe frameborder="0" scrolling="auto" frameborder="0" src="/page/viewCom?document_id={{.document_id}}" width="100%" height="100%" /></iframe>
                 {{else if eq .file_ext "pkg"}}
-                    <div id="fileView">111111</div>
+                    <div id="loading" style="display: none;">
+                        <span class="loading" style="width: 24px; height: 24px; display: block; float: left;"></span>
+                        <span style="display: block; float: left; font-size: 14px; padding-top: 4px;"> Loading ...</span>
+                    </div>
+
+                    <div id="fileView" style="padding-left: 60px;"></div>
                 {{else}}
                     <div id="document_page_view" style="padding: 0 10px 10px 10px;">
                         <textarea style="display:none;">{{$pageContent}}</textarea>
@@ -144,14 +149,61 @@
 
         if ($('#fileView').length > 0) {
             var serve = '/ViewPkg?filePath=' + filePath;
-            serve = "http://10.101.7.56:8080/jqueryFileTree";
-            $('#fileView').fileTree({ root: '/', script: serve }, function(file) {
-                alert(file);
+            // serve = "http://10.101.7.56:88/jqueryFileTree";
+            // $('#fileView').fileTree({ root: '/', script: serve }, function(file) {
+            //     alert(file);
+            // });
+
+            $("#loading").show();
+            $.ajax({
+                url: serve,
+                type:"get",
+                dataType : "json",      
+                success: function(data) {
+                    console.log(data);
+                    $('#fileView').jstree({
+                        'core' : {
+                            'data': FileList2Tree(data)
+                        },
+                        "themes": { "stripes": true },
+                        'types' : {
+                            'default' : {
+                                'icon' : 'fa fa-folder'
+                            },
+                            'f-open' : {
+                                'icon' : 'fa fa-folder-open fa-fw'
+                            },
+                            'f-closed' : {
+                                'icon' : 'fa fa-folder fa-fw'
+                            },
+                            'folder' : {
+                                'icon' : 'fa fa-folder'
+                            },
+                            'file' : {
+                                'icon' : 'fa fa-file-text'
+                            }
+                        },
+                        "plugins": ["changed", "types"]
+                    });
+                },
+                complete: function() {
+                    $("#loading").hide();
+                }
+            });
+            $("#fileView").on('open_node.jstree', function (event, data) {
+                data.instance.set_type(data.node,'f-open');
+            });
+            $("#fileView").on('close_node.jstree', function (event, data) {
+                data.instance.set_type(data.node,'f-closed');
             });
         }
         
         if ($("#document_page_view").length > 0 && fileExt != ".html") TextViewInit();       
     };
+
+
+    
+
 
     $(function() {
         init();

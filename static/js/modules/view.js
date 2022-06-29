@@ -76,3 +76,48 @@ function TextViewInit () {
         }
     })
 }
+
+
+/*==========================================Class FileTree · 将文件路径列表转为目录树==================================================
+    * 原始class写法，以免与整个项目风格不搭。
+    * 原始数据样例：["zipTest/fs/", "zipTest/fs/a.txt", "zipTest/zipTest/", "zipTest/zipTest/files/", "zipTest/zipTest/区块链浏览器1.png"]
+    *       (注：原始数据来自于压缩包的API输出)
+    * Author：chuixue
+    */
+function FileTree(filelist) {
+    this.T = {'children': []};
+    this.cache = {};
+    // this.Create(filelist);
+}
+// 无论文件与目录，text初始末尾斜杠先处理掉，否则影响keyLen判断
+FileTree.prototype.CreateElement = function (text, path, isDir, i, keyLen) {
+    if (i < 0) return this.T;
+    // 非末尾路径必定为目录
+    var dir = i < (path.length - 1) ? 1 : isDir;
+    // key为是否继续下探的依据
+    var key = text.substr(0, keyLen);
+    if (key in this.cache) return this.cache[key];
+    // 递归找到父级，没有则依次重建，直至根节点
+    var last = this.CreateElement(text, path, isDir, i - 1, keyLen - path[i].length - 1);
+    last.children.push({'text': path[i], 'type': ['file', 'folder'][dir], 'children': []});
+    // 缓存记录该节点
+    this.cache[key] = last.children[last.children.length - 1];
+    return this.cache[key];
+}
+// 原始Names文件列表中末尾为斜杠的应该是目录，但附加Types数据更严谨些
+FileTree.prototype.Create = function (data) {
+    data.Names.forEach((e, i) => {
+        // 此句防止目录或文件名带斜杠转义之类情况
+        var fs = e.split("/");
+        // 末尾空字符串是由于原字符串末尾带斜杠
+        var flag = fs[fs.length - 1] == "";
+        var idx = fs.length - (flag ? 2 : 1);
+        var keyLen = flag ? e.length - 1 : e.length;
+        this.CreateElement(e, fs, data.Types[i], idx, keyLen);
+    });
+    return this.T;
+};
+function FileList2Tree (data) {
+    return (new FileTree()).Create(data).children;
+}
+// ===========================================End Class==============================================
