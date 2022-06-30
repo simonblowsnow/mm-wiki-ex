@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -38,9 +39,38 @@ type FileList struct {
 	Names []string `json: names`
 	Types []int    `json: types`
 }
-type FileInfo struct {
-	Name     string `json: name`
-	FileType int    `json: type`
+
+// *zip.Filezip.headerFileInfo
+
+// func (f *FileList) setValue(i int, name string, isDir int) {
+// 	f.Names[i] = name
+// 	f.Types[i] = isDir
+// }
+
+func (fl *FileList) setValue(i int, fi os.FileInfo, name string) {
+	fl.Names[i] = name
+	fl.Types[i] = 0
+	if fi.IsDir() {
+		fl.Types[i] = 1
+	}
+}
+func (fl *FileList) setValueD(fi os.FileInfo, name string) {
+	fl.Names = append(fl.Names, name)
+	if fi == nil {
+		fl.Types = append(fl.Types, 0)
+		return
+	}
+	isDir := 0
+	if fi.IsDir() {
+		isDir = 1
+	}
+	fl.Types = append(fl.Types, isDir)
+}
+
+func newFileList(count int) FileList {
+	names := make([]string, count)
+	types := make([]int, count)
+	return FileList{Names: names, Types: types}
 }
 
 var FILETYPES map[string]string = map[string]string{
@@ -64,6 +94,8 @@ var FILETYPES map[string]string = map[string]string{
 	".xlsx":  "excel",
 	".pdf":   "pdf",
 	".zip":   "pkg",
+	".tar":   "pkg",
+	".gz":    "pkg",
 	".rar":   "pkg",
 	".7z":    "pkg",
 	".rar4":  "pkg",
@@ -701,12 +733,13 @@ func (this *DataController) ViewPkg() {
 
 	var files FileList
 	var err error
+
 	if ext == ".zip" {
 		files, err = GetZipFileList(absPath)
 	} else if ext == ".tar" {
 		files, err = GetTarFileList(absPath)
 	} else if ext == ".gz" {
-		files, err = GetZipFileList(absPath)
+		files, err = GetGZipFileList(absPath)
 	}
 
 	if err == nil {
@@ -736,21 +769,40 @@ func GetZipFileList(zipFile string) (FileList, error) {
 		return FileList{}, err
 	}
 
-	names := make([]string, len(zr.File))
-	types := make([]int, len(zr.File))
+	fs := newFileList(len(zr.File))
 	// TODO：此处遇到node_modules这样的极端目录是否影响效率？
 	for i, file := range zr.File {
 		fpath := GetFileNameUtf8(file)
-		names[i] = fpath
-		types[i] = 0
-		if file.FileInfo().IsDir() {
-			types[i] = 1
-		}
+		fs.setValue(i, file.FileInfo(), fpath)
 	}
-	fs := FileList{Names: names, Types: types}
 	return fs, nil
 }
 
+// 获取tar和tar.gz文件列表通用过程
+// 不支持多态，只能用俩不同类型参数将就一下了
+func _GetTarFileList(gr *gzip.Reader, fr *os.File) (FileList, error) {
+	fs := FileList{}
+	var tr *tar.Reader
+	if fr == nil {
+		tr = tar.NewReader(gr)
+	} else {
+		tr = tar.NewReader(fr)
+	}
+
+	for {
+		h, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fs, err
+		}
+		fs.setValueD(h.FileInfo(), h.Name)
+	}
+	return fs, nil
+}
+
+// tar
 func GetTarFileList(tarFile string) (FileList, error) {
 	nf := FileList{}
 	fr, err := os.Open(tarFile)
@@ -759,24 +811,39 @@ func GetTarFileList(tarFile string) (FileList, error) {
 	}
 	defer fr.Close()
 
-	names := make([]string, 1)
-	types := make([]int, 1)
-	tr := tar.NewReader(fr)
-	for {
-		h, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nf, err
-		}
-		isDir := 0
-		if h.FileInfo().IsDir() {
-			isDir = 1
-		}
-		logs.Error(isDir)
-		logs.Error(h.Name)
+	return _GetTarFileList(nil, fr)
+}
+
+// tar.gz
+func GetGZipFileList(gzFile string) (FileList, error) {
+	fs := FileList{}
+	fr, err := os.Open(gzFile)
+	if err != nil {
+		return fs, err
 	}
-	fs := FileList{Names: names, Types: types}
-	return fs, nil
+	defer fr.Close()
+
+	gr, err := gzip.NewReader(fr)
+	if err != nil {
+		return fs, err
+	}
+	defer gr.Close()
+
+	// 单纯.gz文件，通常内部为单个文件
+	if IsGZ(gzFile) {
+		fs.setValueD(nil, gr.Name)
+		return fs, nil
+	}
+
+	return _GetTarFileList(gr, nil)
+}
+
+// 判断单纯.gz后缀文件
+func IsGZ(name string) bool {
+	ps := strings.Split(strings.ToLower(name), ".")
+	l := len(ps)
+	if l > 1 && ps[l-1] == "gz" && ps[l-2] != "tar" {
+		return true
+	}
+	return false
 }
