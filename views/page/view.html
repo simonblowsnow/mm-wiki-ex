@@ -149,11 +149,6 @@
 
         if ($('#fileView').length > 0) {
             var serve = '/ViewPkg?filePath=' + filePath;
-            // serve = "http://10.101.7.56:88/jqueryFileTree";
-            // $('#fileView').fileTree({ root: '/', script: serve }, function(file) {
-            //     alert(file);
-            // });
-
             $("#loading").show();
             $.ajax({
                 url: serve,
@@ -196,11 +191,49 @@
             $("#fileView").on('close_node.jstree', function (event, data) {
                 data.instance.set_type(data.node,'f-closed');
             });
+            // 选中节点
+            $('#fileView').on("activate_node.jstree", function (obj, e) {
+                var fType = e.node.type;
+                if (fType != "file") return;
+
+                var paths = [];
+                var text = e.node.text;
+                e.node.parents.forEach(function(d) {
+                    var p = $('#fileView').jstree(true).get_node(d);
+                    if (p.id === "#") return;
+                    paths.push(p.text);
+                });
+                paths.reverse();
+                paths.push(text);
+                viewPkgFile(filePath, paths);   
+            });
         }
         
         if ($("#document_page_view").length > 0 && fileExt != ".html") TextViewInit();       
     };
-
+    
+    function viewPkgFile(file, innerFilePath) {
+        var param = {'file': file, 'innerFile': innerFilePath.join("/")};
+        var serve = '/ViewPkgFile';
+        console.log(param);
+        $("#loading").show();
+        $.ajax({
+            url: serve,
+            type:"get",
+            data: param,
+            dataType : "json",      
+            success: function(data) {
+                console.log(data);
+                debugger
+            },
+            error: function(err) {
+                alert(err.responseText);
+            },
+            complete: function() {
+                $("#loading").hide();
+            }
+        });
+    }
 
     
 

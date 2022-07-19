@@ -243,6 +243,7 @@ var Document = {
         }
 
         $(document).ready(function () {
+            console.log(treeData);
             $.fn.zTree.init($(element), setting, treeData);
             var zTreeMenu = $.fn.zTree.getZTreeObj("dir_tree");
             var node = zTreeMenu.getNodeByParam("id", defaultId);

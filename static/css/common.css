@@ -641,9 +641,24 @@ mark {
     background-image: url(../images/metro.png) !important;   
 }
 
+.ztree li span.button.ico_open::before { content: "" !important; font-family: sans-serif !important;}
+.ztree li span.button.ico_close::before { content: "" !important; font-family: sans-serif !important;}
 
-.jstree-node {
-    /* background-image: url(../images/metro.png) !important;
-    background-position: -105px -42px !important; */
-    /* background: url(../images/line_conn.png) 0 0 repeat-y !important; */
-}
+.ztree li span.button.ico_open{margin-right:2px; background: url(../images/files/folder_open.png) no-repeat scroll 0 0 transparent !important; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.ico_close{margin-right:2px; background: url(../images/files/directory.png) no-repeat scroll 0 0 transparent !important; vertical-align:top; *vertical-align:middle}
+
+.ztree li span.button.f_ico_docu{margin-right:2px; background: url(../images/files/file.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_text_ico_docu{margin-right:2px; background: url(../images/files/txt.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_image_ico_docu{margin-right:2px; background: url(../images/files/picture.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_word_ico_docu{margin-right:2px; background: url(../images/files/doc.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_ppt_ico_docu{margin-right:2px; background: url(../images/files/ppt.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_excel_ico_docu{margin-right:2px; background: url(../images/files/xls.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_pdf_ico_docu{margin-right:2px; background: url(../images/files/pdf.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_pkg_ico_docu{margin-right:2px; background: url(../images/files/zip.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_video_ico_docu{margin-right:2px; background: url(../images/files/film.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_audio_ico_docu{margin-right:2px; background: url(../images/files/music.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_code_ico_docu{margin-right:2px; background: url(../images/files/code.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_ps_ico_docu{margin-right:2px; background: url(../images/files/psd.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_html_ico_docu{margin-right:2px; background: url(../images/files/html.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_app_ico_docu{margin-right:2px; background: url(../images/files/application.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_db_ico_docu{margin-right:2px; background: url(../images/files/db.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}

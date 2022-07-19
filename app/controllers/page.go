@@ -147,6 +147,11 @@ var FILETYPES map[string]string = map[string]string{
 	".frm":   "code",
 	".less":  "code",
 	".go":    "code",
+	"txt":    "text",
+	"wav":    "audio",
+	"mp3":    "audio",
+	"ogg":    "audio",
+	"aac":    "audio",
 }
 
 // document page view
@@ -748,6 +753,151 @@ func (this *DataController) ViewPkg() {
 	this.ServeJSON()
 }
 
+// 提供压缩包内部文件内容预览功能
+// 默认解压到同目录下_temp文件夹下
+func (this *DataController) ViewPkgFile() {
+	pageFile := this.GetString("file", "")
+	innerFile := this.GetString("innerFile", "")
+	absPath := utils.Document.GetAbsPageFileByPageFile(pageFile)
+	ext := strings.ToLower(path.Ext(pageFile))
+	filename := filepath.Base(absPath)
+	iFile := innerFile
+	// tar.gz格式内部有些文件夹可能带有./前缀
+	idx := strings.Index(innerFile, "./")
+	if idx != -1 {
+		iFile = innerFile[2:]
+	}
+	// 暂不检验请求路径合法性
+	// fs := strings.Split(strings.ReplaceAll(innerFile, "\\", "/"), "/")
+	innerPath, name := filepath.Split(iFile)
+	dstPath := filepath.Join(filepath.Dir(absPath), "_temp", filename, innerPath)
+
+	ok, _ := utils.File.PathIsExists(dstPath)
+	if !ok {
+		err := os.MkdirAll(dstPath, 0766)
+		if err != nil {
+			this.Abort("创建临时目录失败，请联系管理员！")
+		}
+	}
+	dstName := filepath.Join(dstPath, name)
+
+	dst, err := os.OpenFile(dstName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		this.Abort("创建目标文件失败，请联系管理员！")
+	}
+
+	// ==========================================测试TAR和GZ============================================
+	if ext == ".zip" {
+		err = ExtractZipInnerFile(absPath, innerFile, dst)
+	} else if ext == ".tar" {
+		err = ExtractTarInnerFile(absPath, innerFile, dst)
+	} else if ext == ".gz" {
+		// files, err = GetGZipFileList(absPath)
+	}
+	dst.Close()
+	logs.Error(pageFile)
+	logs.Error(innerFile)
+	logs.Error(absPath)
+	logs.Error(err)
+
+	if err == nil {
+		this.Data["json"] = "Hello"
+	}
+	this.ServeJSON()
+}
+
+// ZIP解压单个文件
+func ExtractZipInnerFile(zipFile string, innerFile string, dst *os.File) error {
+	r, err := zip.OpenReader(zipFile)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		fName := GetFileNameUtf8(f)
+		if fName != innerFile {
+			continue
+		}
+
+		src, err := f.Open()
+		if err != nil {
+			return err
+		}
+		if _, err := io.Copy(dst, src); err != nil {
+			return err
+		}
+		src.Close()
+		break
+	}
+	return nil
+}
+
+// TAR解压单个文件
+func ExtractTarInnerFile(tarFile string, innerFile string, dst *os.File) error {
+	fr, err := os.Open(tarFile)
+	if err != nil {
+		return err
+	}
+	defer fr.Close()
+
+	return _ExtractTarInnerFile(nil, fr, innerFile, dst)
+}
+
+// GZIP解压单个文件
+func ExtractGZipInnerFile(gzFile string, innerFile string, dst *os.File) error {
+	fr, err := os.Open(gzFile)
+	if err != nil {
+		return err
+	}
+	defer fr.Close()
+
+	gr, err := gzip.NewReader(fr)
+	if err != nil {
+		return err
+	}
+	defer gr.Close()
+
+	// 单纯.gz文件，通常内部为单个文件
+	if IsGZ(gzFile) {
+		// fs.setValueD(nil, gr.Name)
+		return nil
+	}
+
+	return _ExtractTarInnerFile(gr, nil, innerFile, dst)
+}
+
+// TAR和GZIP解压单个文件通用过程
+func _ExtractTarInnerFile(gr *gzip.Reader, fr *os.File, innerFile string, dst *os.File) error {
+	var tr *tar.Reader
+	if fr == nil {
+		tr = tar.NewReader(gr)
+	} else {
+		tr = tar.NewReader(fr)
+	}
+
+	for {
+		h, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		if h.Name != innerFile {
+			continue
+		}
+
+		if _, err := io.Copy(dst, tr); err != nil {
+			return err
+		}
+		break
+	}
+	return nil
+}
+
+// =========================================华丽丽分界线======================================================
 //解决文件名乱码问题，如果标示位是0，则是默认的本地编码，默认为gbk
 func GetFileNameUtf8(file *zip.File) string {
 	if file.Flags == 0 {
@@ -761,6 +911,27 @@ func GetFileNameUtf8(file *zip.File) string {
 }
 
 // ========================================================================================
+func _getFilePath(filename string) string {
+	return ""
+}
+
+// zip解压单个制定文件
+func UnZipOneFile(zipFile string, filename string) (FileList, error) {
+	zr, err := zip.OpenReader(zipFile)
+	defer zr.Close()
+	if err != nil {
+		return FileList{}, err
+	}
+
+	fs := newFileList(len(zr.File))
+	// TODO：此处遇到node_modules这样的极端目录是否影响效率？
+	for i, file := range zr.File {
+		fpath := GetFileNameUtf8(file)
+		fs.setValue(i, file.FileInfo(), fpath)
+	}
+	return fs, nil
+}
+
 // zip文件，仅获取文件列表
 func GetZipFileList(zipFile string) (FileList, error) {
 	zr, err := zip.OpenReader(zipFile)

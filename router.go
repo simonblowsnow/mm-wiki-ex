@@ -24,6 +24,7 @@ func initRouter() {
 	beego.Router("/author", &controllers.AuthorController{}, "*:Index")
 	// 新增纯Api方法
 	beego.Router("/ViewPkg", &controllers.DataController{}, "*:ViewPkg")
+	beego.Router("/ViewPkgFile", &controllers.DataController{}, "*:ViewPkgFile")
 
 	beego.AutoRouter(&controllers.AuthorController{})
 	beego.AutoRouter(&controllers.MainController{})
