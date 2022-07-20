@@ -76,6 +76,7 @@ github.com/siddontang/rdb v0.0.0-20150307021120-fc89ed2e418d/go.mod h1:AMEsy7v5z
 github.com/snail007/go-activerecord v0.0.0-20190813031814-2ac2f3d7cff0 h1:zru9A2cEdHTi1ly8KaAMMw8sS93U2nB1LSvc+YwUCc4=
 github.com/snail007/go-activerecord v0.0.0-20190813031814-2ac2f3d7cff0/go.mod h1:2oXFU20cqErcrOV0B5VjMDuEZBcT9RUUL89uBR3QjsE=
 github.com/ssdb/gossdb v0.0.0-20180723034631-88f6b59b84ec/go.mod h1:QBvMkMya+gXctz3kmljlUCu/yB3GZ6oee+dUozsezQE=
+github.com/stretchr/objx v0.1.0 h1:4G4v2dO3VZwixGIRoQ5Lfboy6nUhCyYzaqnIAPPhYs4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.7.1 h1:5TQK59W5E3v0r2duFAb7P95B6hEeOyEnHRa8MjYSMTY=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=

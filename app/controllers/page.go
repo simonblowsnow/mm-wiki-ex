@@ -24,7 +24,7 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 
-	//	"encoding/json"
+	"encoding/json"
 	"github.com/astaxie/beego/logs"
 )
 
@@ -40,12 +40,6 @@ type FileList struct {
 	Types []int    `json: types`
 }
 
-// *zip.Filezip.headerFileInfo
-
-// func (f *FileList) setValue(i int, name string, isDir int) {
-// 	f.Names[i] = name
-// 	f.Types[i] = isDir
-// }
 
 func (fl *FileList) setValue(i int, fi os.FileInfo, name string) {
 	fl.Names[i] = name
@@ -73,87 +67,29 @@ func newFileList(count int) FileList {
 	return FileList{Names: names, Types: types}
 }
 
-var FILETYPES map[string]string = map[string]string{
-	".png":   "image",
-	".jpg":   "image",
-	".bmp":   "image",
-	".svg":   "image",
-	".ico":   "image",
-	".gif":   "image",
-	".tif":   "image",
-	".iif":   "image",
-	".pcd":   "image",
-	".apng":  "image",
-	".jpeg":  "image",
-	".webp":  "image",
-	".doc":   "word",
-	".ppt":   "ppt",
-	".xls":   "excel",
-	".docx":  "word",
-	".pptx":  "ppt",
-	".xlsx":  "excel",
-	".pdf":   "pdf",
-	".zip":   "pkg",
-	".tar":   "pkg",
-	".gz":    "pkg",
-	".rar":   "pkg",
-	".7z":    "pkg",
-	".rar4":  "pkg",
-	".mp4":   "video",
-	".3gp":   "video",
-	".avi":   "video",
-	".wmv":   "video",
-	".ogv":   "video",
-	".flv":   "video",
-	".mgp":   "video",
-	".mkv":   "video",
-	".mov":   "video",
-	".m4v":   "video",
-	".awf":   "video",
-	".asx":   "video",
-	".webm":  "video",
-	".rmvb":  "video",
-	".rm":    "video",
-	".htm":   "code",
-	".html":  "code",
-	".java":  "code",
-	".c":     "code",
-	".h":     "code",
-	".cc":    "code",
-	".cpp":   "code",
-	".cxx":   "code",
-	".py":    "code",
-	".js":    "code",
-	".css":   "code",
-	".sql":   "code",
-	".php":   "code",
-	".xml":   "code",
-	".json":  "code",
-	".jsp":   "code",
-	".asp":   "code",
-	".sh":    "code",
-	".bat":   "code",
-	".cmd":   "code",
-	".ini":   "code",
-	".vbs":   "code",
-	".yaml":  "code",
-	".swift": "code",
-	".scss":  "code",
-	".scala": "code",
-	".ruby":  "code",
-	".r":     "code",
-	".jl":    "code",
-	".cs":    "code",
-	".frm":   "code",
-	".less":  "code",
-	".go":    "code",
-	"txt":    "text",
-	"wav":    "audio",
-	"mp3":    "audio",
-	"ogg":    "audio",
-	"aac":    "audio",
-}
+func LoadTypeConf() map[string]string{
+	conf := make(map[string]string)
+	f, err := os.Open("filetypes.json")
+	if err != nil {
+		return conf
+	}
+	defer f.Close()
+	jsonData, err := ioutil.ReadAll(f) 
+	if err != nil {
+		return conf
+	}
 
+	
+    err = json.Unmarshal(jsonData, &conf)
+    if err != nil {
+        return conf
+    }
+	return conf
+}
+var FILETYPES = LoadTypeConf()
+
+
+// ==================================================== 业务代码开始 ===================================================
 // document page view
 func (this *PageController) View() {
 
@@ -691,42 +627,24 @@ func sendEmail(documentId string, username string, comment string, url string) e
 	return utils.Email.Send(emailConfig, emails, "文档更新通知", body)
 }
 
-// ==========================================通用View==========================================
+// =====================================================通用View=============================================================
 // document page view common, 因去掉了繁琐的验证，可能被用于非法访问
 func (this *PageController) ViewCom() {
 	documentId := this.GetString("document_id", "")
 	document, _ := models.DocumentModel.GetDocumentByDocumentId(documentId)
-	// get parent documents by document
 	_, pageFile, _ := models.DocumentModel.GetParentDocumentsByDocument(document)
-
-	RequestFile(this, pageFile)
-
-	this.viewLayout("page/viewCom", "document_view")
-}
-func (this *PageController) ViewPkgCom() {
-	pageFile := this.GetString("file", "")
-	// pagePath, filename := filepath.Split(pageFile)
-
-	innerFile := this.GetString("innerFile", "")
-	_, filePath := GetInnerFilePath(pageFile, innerFile)
-
-	// 网络文件地址
-	// webPath := filepath.Join(pagePath, "_temp", filename, iFile)
-	// GetInnerFilePath(pageFile, innerFile)
-
-	logs.Error(filePath)
-
 	RequestFile(this, pageFile)
 
 	this.viewLayout("page/viewCom", "document_view")
 }
 
 // 压缩包内部文件预览，已提前解压
-func (this *PageController) ViewPkgContent() {
-	// get parent documents by document
-	// parentDocuments, pageFile, _ := models.DocumentModel.GetParentDocumentsByDocument(document)
-	// RequestFile(this, parentDocuments, pageFile)
-	// parentDocuments := map[string]string{"type": "3"}
+func (this *PageController) ViewPkgCom() {
+	pageFile := this.GetString("file", "")
+	innerFile := this.GetString("innerFile", "")
+	_, filePath := GetInnerFilePath(pageFile, innerFile)
+	RequestFile(this, filePath)
+
 	this.viewLayout("page/viewCom", "document_view")
 }
 
@@ -791,6 +709,7 @@ func GetInnerFilePath(pageFile string, innerFile string) (string, string) {
 	}
 	pagePath, filename := filepath.Split(pageFile)
 	filePath := filepath.Join(pagePath, "_temp", filename, iFile)
+	filePath = strings.ReplaceAll(filePath, "\\", "/")
 	return iFile, filePath
 }
 
@@ -807,8 +726,12 @@ func (this *DataController) ViewPkgFile() {
 	// 暂不检验请求路径合法性
 	// fs := strings.Split(strings.ReplaceAll(innerFile, "\\", "/"), "/")
 	innerPath, name := filepath.Split(iFile)
-
 	dstPath := filepath.Join(filepath.Dir(absPath), "_temp", filename, innerPath)
+	dstName := filepath.Join(dstPath, name)
+	// TODO 检查文件是否存在，防止重复解压========================================================================================
+
+
+	
 
 	ok, _ := utils.File.PathIsExists(dstPath)
 	if !ok {
@@ -817,7 +740,7 @@ func (this *DataController) ViewPkgFile() {
 			this.Abort("创建临时目录失败，请联系管理员！")
 		}
 	}
-	dstName := filepath.Join(dstPath, name)
+	
 
 	dst, err := os.OpenFile(dstName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
@@ -834,7 +757,7 @@ func (this *DataController) ViewPkgFile() {
 	dst.Close()
 
 	if err == nil {
-		this.Data["json"] = "Hello"
+		this.Data["json"] = dstName
 	}
 	this.ServeJSON()
 }

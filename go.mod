@@ -19,6 +19,7 @@ require (
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/snail007/go-activerecord v0.0.0-20190813031814-2ac2f3d7cff0
+	github.com/stretchr/objx v0.1.0
 	github.com/stretchr/testify v1.7.1 // indirect
 	golang.org/x/text v0.3.2
 	google.golang.org/appengine v1.6.7 // indirect
