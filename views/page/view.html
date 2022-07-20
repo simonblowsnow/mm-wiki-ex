@@ -162,21 +162,11 @@
                         },
                         "themes": { "stripes": true },
                         'types' : {
-                            'default' : {
-                                'icon' : 'fa fa-folder'
-                            },
-                            'f-open' : {
-                                'icon' : 'fa fa-folder-open fa-fw'
-                            },
-                            'f-closed' : {
-                                'icon' : 'fa fa-folder fa-fw'
-                            },
-                            'folder' : {
-                                'icon' : 'fa fa-folder'
-                            },
-                            'file' : {
-                                'icon' : 'fa fa-file-text'
-                            }
+                            'default' : { 'icon' : 'fa fa-folder' },
+                            'f-open' : { 'icon' : 'fa fa-folder-open fa-fw' },
+                            'f-closed' : { 'icon' : 'fa fa-folder fa-fw' },
+                            'folder' : { 'icon' : 'fa fa-folder' },
+                            'file' : { 'icon' : 'fa fa-file-text' }
                         },
                         "plugins": ["changed", "types"]
                     });
@@ -224,7 +214,7 @@
             dataType : "json",      
             success: function(data) {
                 console.log(data);
-                debugger
+                openPkgContent(data);
             },
             error: function(err) {
                 alert(err.responseText);
@@ -235,6 +225,23 @@
         });
     }
 
+    function openPkgContent() {
+        // /page/viewCom?document_id={{.document_id}}
+        // var content = "/document/add?space_id=" + treeNode.spaceId + "&parent_id=" + treeNode.id;
+        var content = "/page/viewCom?document_id={{.document_id}}";
+        var sz = ["90%", "90%"];
+        layer.open({
+            type: 2,
+            skin: Layers.skin,
+            title: '<strong>文件预览</strong>',
+            shadeClose: true,
+            shade: 0.6,
+            maxmin: true,
+            area: sz,
+            // content: content,
+            padding: "10px"
+        });
+    }
     
 
 

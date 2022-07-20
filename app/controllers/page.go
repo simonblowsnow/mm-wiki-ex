@@ -694,13 +694,44 @@ func sendEmail(documentId string, username string, comment string, url string) e
 // ==========================================通用View==========================================
 // document page view common, 因去掉了繁琐的验证，可能被用于非法访问
 func (this *PageController) ViewCom() {
-
 	documentId := this.GetString("document_id", "")
 	document, _ := models.DocumentModel.GetDocumentByDocumentId(documentId)
 	// get parent documents by document
-	parentDocuments, pageFile, _ := models.DocumentModel.GetParentDocumentsByDocument(document)
+	_, pageFile, _ := models.DocumentModel.GetParentDocumentsByDocument(document)
 
-	// 判断文件类型
+	RequestFile(this, pageFile)
+
+	this.viewLayout("page/viewCom", "document_view")
+}
+func (this *PageController) ViewPkgCom() {
+	pageFile := this.GetString("file", "")
+	// pagePath, filename := filepath.Split(pageFile)
+
+	innerFile := this.GetString("innerFile", "")
+	_, filePath := GetInnerFilePath(pageFile, innerFile)
+
+	// 网络文件地址
+	// webPath := filepath.Join(pagePath, "_temp", filename, iFile)
+	// GetInnerFilePath(pageFile, innerFile)
+
+	logs.Error(filePath)
+
+	RequestFile(this, pageFile)
+
+	this.viewLayout("page/viewCom", "document_view")
+}
+
+// 压缩包内部文件预览，已提前解压
+func (this *PageController) ViewPkgContent() {
+	// get parent documents by document
+	// parentDocuments, pageFile, _ := models.DocumentModel.GetParentDocumentsByDocument(document)
+	// RequestFile(this, parentDocuments, pageFile)
+	// parentDocuments := map[string]string{"type": "3"}
+	this.viewLayout("page/viewCom", "document_view")
+}
+
+// 文件请求通用过程
+func RequestFile(self *PageController, pageFile string) {
 	ext := strings.ToLower(path.Ext(pageFile))
 	fileExt, flag := FILETYPES[ext]
 	documentContent := ""
@@ -712,22 +743,20 @@ func (this *PageController) ViewCom() {
 		documentContent = dc
 	}
 
-	href := this.Ctx.Request.Referer()
+	href := self.Ctx.Request.Referer()
 	u, _ := url.Parse(href)
 	host := "http://" + u.Host
 	if href[:5] == "https" {
 		host = "https://" + u.Host
 	}
+	document := map[string]string{"type": "3"}
 
-	this.Data["document"] = document
-	this.Data["parent_documents"] = parentDocuments
-	this.Data["file_type"] = document["type"]
-	this.Data["file_path"] = pageFile
-	this.Data["file_ext"] = fileExt
-	this.Data["file_url"] = host + "/file/" + pageFile
-	this.Data["page_content"] = documentContent
-	this.viewLayout("page/viewCom", "document_view")
-	//
+	self.Data["document"] = document
+	self.Data["file_type"] = document["type"]
+	self.Data["file_path"] = pageFile
+	self.Data["file_ext"] = fileExt
+	self.Data["file_url"] = host + "/file/" + pageFile
+	self.Data["page_content"] = documentContent
 }
 
 // 提供压缩包文件预览功能	DataController PageController
@@ -753,6 +782,18 @@ func (this *DataController) ViewPkg() {
 	this.ServeJSON()
 }
 
+// tar.gz格式内部有些文件夹可能带有./前缀
+func GetInnerFilePath(pageFile string, innerFile string) (string, string) {
+	iFile := innerFile
+	idx := strings.Index(innerFile, "./")
+	if idx != -1 {
+		iFile = innerFile[2:]
+	}
+	pagePath, filename := filepath.Split(pageFile)
+	filePath := filepath.Join(pagePath, "_temp", filename, iFile)
+	return iFile, filePath
+}
+
 // 提供压缩包内部文件内容预览功能
 // 默认解压到同目录下_temp文件夹下
 func (this *DataController) ViewPkgFile() {
@@ -760,16 +801,13 @@ func (this *DataController) ViewPkgFile() {
 	innerFile := this.GetString("innerFile", "")
 	absPath := utils.Document.GetAbsPageFileByPageFile(pageFile)
 	ext := strings.ToLower(path.Ext(pageFile))
-	filename := filepath.Base(absPath)
-	iFile := innerFile
-	// tar.gz格式内部有些文件夹可能带有./前缀
-	idx := strings.Index(innerFile, "./")
-	if idx != -1 {
-		iFile = innerFile[2:]
-	}
+	_, filename := filepath.Split(pageFile)
+	iFile, _ := GetInnerFilePath(pageFile, innerFile)
+
 	// 暂不检验请求路径合法性
 	// fs := strings.Split(strings.ReplaceAll(innerFile, "\\", "/"), "/")
 	innerPath, name := filepath.Split(iFile)
+
 	dstPath := filepath.Join(filepath.Dir(absPath), "_temp", filename, innerPath)
 
 	ok, _ := utils.File.PathIsExists(dstPath)
@@ -786,19 +824,14 @@ func (this *DataController) ViewPkgFile() {
 		this.Abort("创建目标文件失败，请联系管理员！")
 	}
 
-	// ==========================================测试TAR和GZ============================================
 	if ext == ".zip" {
 		err = ExtractZipInnerFile(absPath, innerFile, dst)
 	} else if ext == ".tar" {
 		err = ExtractTarInnerFile(absPath, innerFile, dst)
 	} else if ext == ".gz" {
-		// files, err = GetGZipFileList(absPath)
+		err = ExtractGZipInnerFile(absPath, innerFile, dst)
 	}
 	dst.Close()
-	logs.Error(pageFile)
-	logs.Error(innerFile)
-	logs.Error(absPath)
-	logs.Error(err)
 
 	if err == nil {
 		this.Data["json"] = "Hello"
@@ -860,7 +893,9 @@ func ExtractGZipInnerFile(gzFile string, innerFile string, dst *os.File) error {
 
 	// 单纯.gz文件，通常内部为单个文件
 	if IsGZ(gzFile) {
-		// fs.setValueD(nil, gr.Name)
+		if _, err := io.Copy(dst, gr); err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -910,11 +945,7 @@ func GetFileNameUtf8(file *zip.File) string {
 	}
 }
 
-// ========================================================================================
-func _getFilePath(filename string) string {
-	return ""
-}
-
+// ==========================================解压相关=========================================================
 // zip解压单个制定文件
 func UnZipOneFile(zipFile string, filename string) (FileList, error) {
 	zr, err := zip.OpenReader(zipFile)
