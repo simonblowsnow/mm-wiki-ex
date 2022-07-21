@@ -10,6 +10,7 @@ import (
 
 	"github.com/phachon/mm-wiki/app/models"
 	"github.com/phachon/mm-wiki/app/utils"
+	"github.com/astaxie/beego/logs"
 )
 
 type DocumentController struct {
@@ -473,11 +474,21 @@ func (this *DocumentController) Delete() {
 		this.jsonError("删除文档失败！")
 	}
 
+	if document["type"] == "1" {
+		ext
+		logs.Error(pageFile)	
+	}
+	logs.Error(pageFile)
+	logs.Error(document["type"])
+	return
+
 	err = models.DocumentModel.DeleteDBAndFile(documentId, spaceId, this.UserId, pageFile, document["type"])
 	if err != nil {
 		this.ErrorLog("删除文档 " + documentId + " 失败：" + err.Error())
 		this.jsonError("删除文档失败！")
 	}
+	// 如果是压缩包，则删除临时缓存
+	
 
 	// delete attachment
 	err = models.AttachmentModel.DeleteAttachmentsDBFileByDocumentId(documentId)

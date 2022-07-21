@@ -67,25 +67,7 @@ func newFileList(count int) FileList {
 	return FileList{Names: names, Types: types}
 }
 
-func LoadTypeConf() map[string]string{
-	conf := make(map[string]string)
-	f, err := os.Open("filetypes.json")
-	if err != nil {
-		return conf
-	}
-	defer f.Close()
-	jsonData, err := ioutil.ReadAll(f) 
-	if err != nil {
-		return conf
-	}
 
-	
-    err = json.Unmarshal(jsonData, &conf)
-    if err != nil {
-        return conf
-    }
-	return conf
-}
 var FILETYPES = LoadTypeConf()
 
 
@@ -728,11 +710,12 @@ func (this *DataController) ViewPkgFile() {
 	innerPath, name := filepath.Split(iFile)
 	dstPath := filepath.Join(filepath.Dir(absPath), "_temp", filename, innerPath)
 	dstName := filepath.Join(dstPath, name)
-	// TODO 检查文件是否存在，防止重复解压========================================================================================
-
-
-	
-
+	// 文件已存在则不再重复解压
+	flag, _ := utils.File.PathIsExists(dstName)
+	if flag {
+		this.ServeJSON()
+		return 
+	}
 	ok, _ := utils.File.PathIsExists(dstPath)
 	if !ok {
 		err := os.MkdirAll(dstPath, 0766)
@@ -740,7 +723,6 @@ func (this *DataController) ViewPkgFile() {
 			this.Abort("创建临时目录失败，请联系管理员！")
 		}
 	}
-	
 
 	dst, err := os.OpenFile(dstName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
