@@ -17,14 +17,13 @@ import (
 	"strings"
 
 	"github.com/astaxie/beego"
-	"github.com/phachon/mm-wiki/app"
-	"github.com/phachon/mm-wiki/app/models"
-	"github.com/phachon/mm-wiki/app/services"
-	"github.com/phachon/mm-wiki/app/utils"
+	"github.com/simonblowsnow/mm-wiki-ex/app"
+	"github.com/simonblowsnow/mm-wiki-ex/app/models"
+	"github.com/simonblowsnow/mm-wiki-ex/app/services"
+	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 
-	"encoding/json"
 	"github.com/astaxie/beego/logs"
 )
 
@@ -68,7 +67,7 @@ func newFileList(count int) FileList {
 }
 
 
-var FILETYPES = LoadTypeConf()
+var FILETYPES = utils.FILETYPES
 
 
 // ==================================================== 业务代码开始 ===================================================
@@ -119,7 +118,7 @@ func (this *PageController) View() {
 	fileExt, flag := FILETYPES[ext]
 	documentContent := ""
 	// 已识别的非文本标准格式文件，不读其内容
-	if !flag {
+	if !flag || ext == ".md" {
 		fileExt = ext
 		// get document content
 		dc, err := utils.Document.GetContentByPageFile(pageFile)
@@ -183,6 +182,7 @@ func (this *PageController) View() {
 	this.Data["parent_documents"] = parentDocuments
 	this.Data["file_type"] = document["type"]
 	this.Data["file_path"] = pageFile
+	this.Data["file_suffix"] = ext
 	this.Data["file_ext"] = fileExt
 	this.Data["file_url"] = host + "/file/" + pageFile
 	this.Data["document_id"] = documentId

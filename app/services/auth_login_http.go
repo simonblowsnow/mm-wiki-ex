@@ -3,7 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/phachon/mm-wiki/app/utils"
+	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
 )
 
 type AuthLoginHttpRes struct {

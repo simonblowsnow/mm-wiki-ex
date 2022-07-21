@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/astaxie/beego/logs"
-	"github.com/phachon/mm-wiki/app/models"
+	"github.com/simonblowsnow/mm-wiki-ex/app/models"
 )
 
 var DocIndexService = NewDocIndexService()

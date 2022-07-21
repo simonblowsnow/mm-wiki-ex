@@ -5,10 +5,10 @@ import (
 	"net/http"
 
 	"github.com/astaxie/beego"
-	"github.com/phachon/mm-wiki/app"
-	"github.com/phachon/mm-wiki/app/controllers"
-	systemControllers "github.com/phachon/mm-wiki/app/modules/system/controllers"
-	"github.com/phachon/mm-wiki/app/utils"
+	"github.com/simonblowsnow/mm-wiki-ex/app"
+	"github.com/simonblowsnow/mm-wiki-ex/app/controllers"
+	systemControllers "github.com/simonblowsnow/mm-wiki-ex/app/modules/system/controllers"
+	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
 )
 
 func init() {

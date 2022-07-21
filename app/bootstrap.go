@@ -6,10 +6,10 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"github.com/fatih/color"
-	"github.com/phachon/mm-wiki/app/models"
-	"github.com/phachon/mm-wiki/app/utils"
-	"github.com/phachon/mm-wiki/app/work"
-	"github.com/phachon/mm-wiki/global"
+	"github.com/simonblowsnow/mm-wiki-ex/app/models"
+	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
+	"github.com/simonblowsnow/mm-wiki-ex/app/work"
+	"github.com/simonblowsnow/mm-wiki-ex/global"
 	"github.com/snail007/go-activerecord/mysql"
 	"log"
 	"os"
@@ -80,7 +80,7 @@ func poster() {
 ` +
 		"Author: phachon\r\n" +
 		"Version: " + Version + "\r\n" +
-		"Link: https://github.com/phachon/mm-wiki"
+		"Link: https://github.com/simonblowsnow/mm-wiki-ex"
 	fg.Println(logo)
 }
 

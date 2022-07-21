@@ -3,9 +3,9 @@ package work
 import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
-	"github.com/phachon/mm-wiki/app/models"
-	"github.com/phachon/mm-wiki/app/services"
-	"github.com/phachon/mm-wiki/app/utils"
+	"github.com/simonblowsnow/mm-wiki-ex/app/models"
+	"github.com/simonblowsnow/mm-wiki-ex/app/services"
+	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
 	"sync"
 	"time"
 )

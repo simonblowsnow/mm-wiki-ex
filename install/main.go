@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/astaxie/beego"
-	"github.com/phachon/mm-wiki/install/storage"
+	"github.com/simonblowsnow/mm-wiki-ex/install/storage"
 	"log"
 	"os"
 	"path/filepath"

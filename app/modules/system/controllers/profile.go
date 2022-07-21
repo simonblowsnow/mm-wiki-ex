@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"github.com/astaxie/beego/validation"
-	"github.com/phachon/mm-wiki/app/models"
+	"github.com/simonblowsnow/mm-wiki-ex/app/models"
 	"strings"
 )
 

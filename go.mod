@@ -1,4 +1,4 @@
-module github.com/phachon/mm-wiki
+module github.com/simonblowsnow/mm-wiki-ex
 
 go 1.12
 

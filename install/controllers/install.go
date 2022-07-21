@@ -2,9 +2,9 @@ package controllers
 
 import (
 	"github.com/astaxie/beego/validation"
-	"github.com/phachon/mm-wiki/app/utils"
-	"github.com/phachon/mm-wiki/global"
-	"github.com/phachon/mm-wiki/install/storage"
+	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
+	"github.com/simonblowsnow/mm-wiki-ex/global"
+	"github.com/simonblowsnow/mm-wiki-ex/install/storage"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
 	"io/ioutil"

@@ -4,7 +4,7 @@ ENV TZ=Asia/Shanghai
 
 WORKDIR /app
 
-RUN git clone https://github.com/phachon/mm-wiki.git
+RUN git clone https://github.com/simonblowsnow/mm-wiki-ex.git
 
 
 FROM golang:1.14.1-alpine

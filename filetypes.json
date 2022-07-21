@@ -74,7 +74,7 @@
 	".go":    "code",
 	".md":   "code",
 	".yml":   "code",
-	".txt":    "text",
+	".txt":    "code",
 	".wav":    "audio",
 	".mp3":    "audio",
 	".ogg":    "audio",

@@ -42,6 +42,7 @@
                     <!-- 格式判定 -->
                     {{$comType := 0}}
                     {{if eq .file_ext "image" "pdf" "word" "excel" "ppt" "video" "code"}}{{$comType = 1}}{{end}}
+                    {{if eq .file_suffix ".md" ".MD"}}{{$comType = 0}}{{end}}
 
                     <div class="col-md-4 text-right">
                         <div class="btn-group" role="group" aria-label="...">
@@ -100,7 +101,7 @@
                         <span class="loading" style="width: 24px; height: 24px; display: block; float: left;"></span>
                         <span style="display: block; float: left; font-size: 14px; padding-top: 4px;"> Loading ...</span>
                     </div>
-
+                    <div style=""></div>
                     <div id="fileView" style="padding-left: 60px;"></div>
                 {{else}}
                     <div id="document_page_view" style="padding: 0 10px 10px 10px;">
@@ -125,6 +126,8 @@
         parent.layoutOpen();
     }
     
+    
+
     // 【增加·文件地址复制功能】
     function init() {
         var fileExt = $("#fileExt").val();
@@ -147,61 +150,65 @@
             });
         }
 
-        if ($('#fileView').length > 0) {
-            var serve = '/ViewPkg?filePath=' + filePath;
-            $("#loading").show();
-            $.ajax({
-                url: serve,
-                type:"get",
-                dataType : "json",      
-                success: function(data) {
-                    console.log(data);
-                    $('#fileView').jstree({
-                        'core' : {
-                            'data': FileList2Tree(data)
-                        },
-                        "themes": { "stripes": true },
-                        'types' : {
-                            'default' : { 'icon' : 'fa fa-folder' },
-                            'f-open' : { 'icon' : 'fa fa-folder-open fa-fw' },
-                            'f-closed' : { 'icon' : 'fa fa-folder fa-fw' },
-                            'folder' : { 'icon' : 'fa fa-folder' },
-                            'file' : { 'icon' : 'fa fa-file-text' }
-                        },
-                        "plugins": ["changed", "types"]
-                    });
-                },
-                complete: function() {
-                    $("#loading").hide();
-                }
-            });
-            $("#fileView").on('open_node.jstree', function (event, data) {
-                data.instance.set_type(data.node,'f-open');
-            });
-            $("#fileView").on('close_node.jstree', function (event, data) {
-                data.instance.set_type(data.node,'f-closed');
-            });
-            // 选中节点
-            $('#fileView').on("activate_node.jstree", function (obj, e) {
-                var fType = e.node.type;
-                if (fType != "file") return;
-
-                var paths = [];
-                var text = e.node.text;
-                e.node.parents.forEach(function(d) {
-                    var p = $('#fileView').jstree(true).get_node(d);
-                    if (p.id === "#") return;
-                    paths.push(p.text);
-                });
-                paths.reverse();
-                paths.push(text);
-                viewPkgFile(filePath, paths);   
-            });
-        }
+        if ($('#fileView').length > 0) loadFiletree(filePath);
         
         if ($("#document_page_view").length > 0 && fileExt != ".html") TextViewInit();       
     };
     
+    // 用于加载压缩包内的文件树
+    function loadFiletree(filePath) {
+        var serve = '/ViewPkg?filePath=' + filePath;
+        $("#loading").show();
+        $.ajax({
+            url: serve,
+            type:"get",
+            dataType : "json",      
+            success: function(data) {
+                console.log(data);
+                $('#fileView').jstree({
+                    'core' : {
+                        'data': FileList2Tree(data)
+                    },
+                    "themes": { "stripes": true },
+                    'types' : {
+                        'default' : { 'icon' : 'fa fa-folder' },
+                        'f-open' : { 'icon' : 'fa fa-folder-open fa-fw' },
+                        'f-closed' : { 'icon' : 'fa fa-folder fa-fw' },
+                        'folder' : { 'icon' : 'fa fa-folder' },
+                        'file' : { 'icon' : 'fa fa-file-text' }
+                    },
+                    "plugins": ["changed", "types"]
+                });
+            },
+            complete: function() {
+                $("#loading").hide();
+            }
+        });
+        $("#fileView").on('open_node.jstree', function (event, data) {
+            data.instance.set_type(data.node,'f-open');
+        });
+        $("#fileView").on('close_node.jstree', function (event, data) {
+            data.instance.set_type(data.node,'f-closed');
+        });
+        // 选中节点
+        $('#fileView').on("activate_node.jstree", function (obj, e) {
+            var fType = e.node.type;
+            if (fType != "file") return;
+
+            var paths = [];
+            var text = e.node.text;
+            e.node.parents.forEach(function(d) {
+                var p = $('#fileView').jstree(true).get_node(d);
+                if (p.id === "#") return;
+                paths.push(p.text);
+            });
+            paths.reverse();
+            paths.push(text);
+            viewPkgFile(filePath, paths);   
+        });
+    }
+
+    // 请求压缩包内的单个文件内容，先请求解压，再请求解压后的文件内容
     function viewPkgFile(file, innerFilePath) {
         var param = {'file': file, 'innerFile': innerFilePath.join("/")};
         var serve = '/ViewPkgFile';

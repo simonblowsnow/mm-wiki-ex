@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/astaxie/beego/logs"
-	"github.com/phachon/mm-wiki/app/utils"
+	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
 	"github.com/snail007/go-activerecord/mysql"
 )
 

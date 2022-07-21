@@ -1,16 +1,17 @@
 package controllers
 
 import (
+	"os"
 	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/phachon/mm-wiki/app/services"
+	"github.com/simonblowsnow/mm-wiki-ex/app/services"
 
-	"github.com/phachon/mm-wiki/app/models"
-	"github.com/phachon/mm-wiki/app/utils"
-	"github.com/astaxie/beego/logs"
+	"github.com/simonblowsnow/mm-wiki-ex/app/models"
+	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
+	// "github.com/astaxie/beego/logs"
 )
 
 type DocumentController struct {
@@ -429,9 +430,9 @@ func (this *DocumentController) updateDocSequence(moveType string, document map[
 
 // delete document
 func (this *DocumentController) Delete() {
-
+	
 	documentId := this.GetString("document_id", "0")
-
+	
 	if documentId == "0" {
 		this.jsonError("没有选择文档！")
 	}
@@ -474,21 +475,20 @@ func (this *DocumentController) Delete() {
 		this.jsonError("删除文档失败！")
 	}
 
-	if document["type"] == "1" {
-		ext
-		logs.Error(pageFile)	
-	}
-	logs.Error(pageFile)
-	logs.Error(document["type"])
-	return
-
 	err = models.DocumentModel.DeleteDBAndFile(documentId, spaceId, this.UserId, pageFile, document["type"])
 	if err != nil {
 		this.ErrorLog("删除文档 " + documentId + " 失败：" + err.Error())
 		this.jsonError("删除文档失败！")
 	}
 	// 如果是压缩包，则删除临时缓存
-	
+	tp := utils.GetFileType(pageFile)
+	if document["type"] == "3" && tp == "pkg" {
+		tempPath := utils.GetTempFilePath(pageFile)
+		flag, _ := utils.File.PathIsExists(tempPath)
+		if flag {
+			os.RemoveAll(tempPath)
+		}
+	}	
 
 	// delete attachment
 	err = models.AttachmentModel.DeleteAttachmentsDBFileByDocumentId(documentId)

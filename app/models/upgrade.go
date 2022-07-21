@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
-	"github.com/phachon/mm-wiki/app/utils"
-	"github.com/phachon/mm-wiki/global"
+	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
+	"github.com/simonblowsnow/mm-wiki-ex/global"
 	"time"
 )
 

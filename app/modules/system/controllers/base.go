@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"github.com/phachon/mm-wiki/app/controllers"
+	"github.com/simonblowsnow/mm-wiki-ex/app/controllers"
 )
 
 type BaseController struct {

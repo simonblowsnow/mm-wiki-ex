@@ -1,1 +1,1 @@
-mm-wiki.exe --conf conf/mm-wiki.conf
+mm-wiki-ex.exe --conf conf/mm-wiki.conf
