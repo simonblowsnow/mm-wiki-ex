@@ -81,19 +81,19 @@
                 </div>
                 <hr style="margin: 0">
             </div>
-            
-            <div class="panel-body md-view-box page-view-content" >
-                <div class="dir-preview-box">
-                    <div class="dir-preview-btn">
-                        {{if eq $comType 0 }}
-                        展开目录
-                        {{end}}
-                    </div>
-                    <div class="page-view-dir-toc" id="page-view-dir-toc">
 
+            <div class="panel-body md-view-box page-view-content" >
+                {{if eq $comType 0 }}
+                    {{if ne .file_ext "pkg"}}
+                    <div class="dir-preview-box">
+                        <div class="dir-preview-btn">
+                            展开目录
+                        </div>
+                        <div class="page-view-dir-toc" id="page-view-dir-toc"></div>
                     </div>
-                </div>
-                
+                    {{end}}
+                {{end}}
+
                 {{if eq $comType 1}}
                     <iframe frameborder="0" scrolling="auto" frameborder="0" src="/page/viewCom?document_id={{.document_id}}" width="100%" height="100%" /></iframe>
                 {{else if eq .file_ext "pkg"}}
@@ -101,8 +101,19 @@
                         <span class="loading" style="width: 24px; height: 24px; display: block; float: left;"></span>
                         <span style="display: block; float: left; font-size: 14px; padding-top: 4px;"> Loading ...</span>
                     </div>
-                    <div style=""></div>
-                    <div id="fileView" style="padding-left: 60px;"></div>
+                    <!-- 压缩包操作 -->
+                    <div style="height: 50px; float: right; transform: translate(0px, -20px);  max-width: 100%">
+                        <div class="btn-group" role="group" aria-label="..." style="float: right">
+                            <a type="button" id="decompression" class="btn btn-default"><i class="glyphicon glyphicon-folder-close"></i>&nbsp;在线解压</a>
+                            <a type="button" id="webUrl" data-clipboard-text="Just" class="btn btn-default">
+                                <i class="glyphicon glyphicon-paperclip"></i>&nbsp;服务地址
+                            </a>
+                            <a type="button" id="clearPkg" class="btn btn-default">
+                                <i class="glyphicon glyphicon-floppy-remove"></i>&nbsp;清除
+                            </a>
+                        </div>
+                    </div>
+                    <div id="fileView" style="padding-left: 60px; padding-top: 25px;"></div>
                 {{else}}
                     <div id="document_page_view" style="padding: 0 10px 10px 10px;">
                         <textarea style="display:none;">{{$pageContent}}</textarea>
@@ -126,7 +137,21 @@
         parent.layoutOpen();
     }
     
-    
+    function showUrl (url) {
+        layer.open({
+            type: 1,
+            skin: Layers.skin,
+            title: '<strong>文件地址</strong>',
+            shadeClose: true,
+            shade : 0.6,
+            maxmin: true,
+            area: ["450px", "200px"],
+            content: "<div><div style='height: 40px; margin-top: 25px'>已复制到剪切板，您也可" + 
+                "<a target='_blank' href='"+ url + "'>直接点击访问或下载</a></div>" + 
+                "<div><input type='text' style='width: 400px; height: 35px' value='" + url + "'/></div></div>",
+            padding: "10px"
+        });
+    }
 
     // 【增加·文件地址复制功能】
     function init() {
@@ -140,7 +165,11 @@
             var url = getFileUrl();
             return "<div style='text-align: left; color: #ccc'>点击复制文件地址</div>" + url;
         }});
+        $('#clipBtn').click(function () {
+            showUrl(url);
+        });
         
+
         // html文件则显示打开按钮
         var ps = url.split(".");
         if (ps.length > 0 && (ps[ps.length - 1] == "html" || ps[ps.length - 1] == "htm")) {
@@ -184,6 +213,25 @@
                 $("#loading").hide();
             }
         });
+        $('#fileView').on("touchstart", ".jstree-anchor", function(e) {
+            let node = $(e.currentTarget).parent();
+            console.log(node);
+            if ($(node).hasClass("jstree-closed")) {
+                return $('#fileView').jstree('open_node', node);
+            }
+            if ($(node).hasClass("jstree-open")) {
+                return $('#fileView').jstree('close_node', node);
+            }
+            
+            console.log(node[0]);
+
+        });
+        $('#fileView').on("touchstart", ".jstree-node", function(e){
+            // .jstree-icon.jstree-ocl   jstree-anchor jstree-clicked  .jstree-icon.fa-folder-open
+            // if ($(e.currentTarget).hasClass("jstree-closed")) {
+            //     $('#fileView').jstree('open_node', e.currentTarget);
+            // }
+        })
         $("#fileView").on('open_node.jstree', function (event, data) {
             data.instance.set_type(data.node,'f-open');
         });
