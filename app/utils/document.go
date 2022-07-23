@@ -63,6 +63,35 @@ func (d *document) GetContentByPageFile(pageFile string) (content string, err er
 	return File.GetFileContents(d.GetAbsPageFileByPageFile(pageFile))
 }
 
+// 【新增】create folder
+func (d *document) CreateFolder(absPath string) error {
+	if absPath == "" {
+		return nil
+	}
+	d.lock.Lock()
+	// 应该不用先检查是否存在，MkdirAll不会覆盖
+	err := os.MkdirAll(absPath, 0777)
+	if err != nil {
+		d.lock.Unlock()
+		return err
+	}
+	d.lock.Unlock()
+	return nil
+}
+
+// 【新增】一定记着释放啊！！！
+func (d *document) OpenFile(filename string) *os.File {
+	d.lock.Lock()
+	dst, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		d.lock.Unlock()
+		return nil
+	}
+	d.lock.Unlock()
+	return dst
+}
+
+
 // create document
 func (d *document) Create(pageFile string) error {
 	if pageFile == "" {

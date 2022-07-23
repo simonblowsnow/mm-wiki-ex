@@ -47,6 +47,7 @@
                     <div class="col-md-4 text-right">
                         <div class="btn-group" role="group" aria-label="...">
                             <!-- 文件地址及类型 -->
+                            <input type="hidden" id="fileId" value="{{.document_id}}">
                             <input type="hidden" id="fileType" value="{{.file_type}}">
                             <input type="hidden" id="filePath" value="{{.file_path}}">
                             <input type="hidden" id="fileUrl" value="{{.file_url}}">
@@ -102,9 +103,11 @@
                         <span style="display: block; float: left; font-size: 14px; padding-top: 4px;"> Loading ...</span>
                     </div>
                     <!-- 压缩包操作 -->
-                    <div style="height: 50px; float: right; transform: translate(0px, -20px);  max-width: 100%">
+                    <div style="height: 50px; float: right; transform: translate(0px, -20px);  max-width: 100%;">
                         <div class="btn-group" role="group" aria-label="..." style="float: right">
-                            <a type="button" id="decompression" class="btn btn-default"><i class="glyphicon glyphicon-folder-close"></i>&nbsp;在线解压</a>
+                            <a type="button" id="decompression" class="btn btn-default" onclick="decompressFile()">
+                                <i class="glyphicon glyphicon-folder-close"></i>&nbsp;在线解压
+                            </a>
                             <a type="button" id="webUrl" data-clipboard-text="Just" class="btn btn-default">
                                 <i class="glyphicon glyphicon-paperclip"></i>&nbsp;服务地址
                             </a>
@@ -260,12 +263,11 @@
     function viewPkgFile(file, innerFilePath) {
         var param = {'file': file, 'innerFile': innerFilePath.join("/")};
         var serve = '/ViewPkgFile';
-        console.log(param);
         $("#loading").show();
         $.ajax({
             url: serve,
-            type:"get",
             data: param,
+            type:"get",
             dataType : "json",      
             success: function(data) {
                 console.log(data);
@@ -297,6 +299,28 @@
         });
     }
     
+    function decompressFile() {
+        var filePath = $("#filePath").val();
+        var fileId = $("#fileId").val();
+        var param = {'file': filePath, 'document_id': fileId};
+        var serve = '/Decompress';
+        $("#loading").show();
+        $.ajax({
+            url: serve,
+            data: param,
+            type:"get",
+            dataType : "json",      
+            success: function(data) {
+                console.log(data);
+            },
+            error: function(err) {
+                alert(err.responseText);
+            },
+            complete: function() {
+                $("#loading").hide();
+            }
+        });
+    }
 
 
     $(function() {

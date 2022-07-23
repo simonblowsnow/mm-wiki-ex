@@ -1,14 +1,14 @@
 package controllers
 
 import (
-	"archive/tar"
-	"archive/zip"
-	"bytes"
-	"compress/gzip"
+	// "archive/tar"
+	// "archive/zip"
+	// "bytes"
+	// "compress/gzip"
+	// "io"
+	// "io/ioutil"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
@@ -21,8 +21,8 @@ import (
 	"github.com/simonblowsnow/mm-wiki-ex/app/models"
 	"github.com/simonblowsnow/mm-wiki-ex/app/services"
 	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
-	"golang.org/x/text/encoding/simplifiedchinese"
-	"golang.org/x/text/transform"
+	// "golang.org/x/text/encoding/simplifiedchinese"
+	// "golang.org/x/text/transform"
 
 	"github.com/astaxie/beego/logs"
 )
@@ -33,39 +33,6 @@ type PageController struct {
 type DataController struct {
 	beego.Controller
 }
-
-type FileList struct {
-	Names []string `json: names`
-	Types []int    `json: types`
-}
-
-
-func (fl *FileList) setValue(i int, fi os.FileInfo, name string) {
-	fl.Names[i] = name
-	fl.Types[i] = 0
-	if fi.IsDir() {
-		fl.Types[i] = 1
-	}
-}
-func (fl *FileList) setValueD(fi os.FileInfo, name string) {
-	fl.Names = append(fl.Names, name)
-	if fi == nil {
-		fl.Types = append(fl.Types, 0)
-		return
-	}
-	isDir := 0
-	if fi.IsDir() {
-		isDir = 1
-	}
-	fl.Types = append(fl.Types, isDir)
-}
-
-func newFileList(count int) FileList {
-	names := make([]string, count)
-	types := make([]int, count)
-	return FileList{Names: names, Types: types}
-}
-
 
 var FILETYPES = utils.FILETYPES
 
@@ -630,6 +597,7 @@ func (this *PageController) ViewPkgCom() {
 	this.viewLayout("page/viewCom", "document_view")
 }
 
+
 // 文件请求通用过程
 func RequestFile(self *PageController, pageFile string) {
 	ext := strings.ToLower(path.Ext(pageFile))
@@ -659,40 +627,43 @@ func RequestFile(self *PageController, pageFile string) {
 	self.Data["page_content"] = documentContent
 }
 
+// 在线解压
+func (this *DataController) Decompress() {
+	documentId := this.GetString("document_id", "")
+	pageFile := this.GetString("file", "")
+	document, err := models.DocumentModel.GetDocumentByDocumentId(documentId)
+	if err != nil || len(document) == 0 {
+		return
+	}
+	c := CreateCompressor(pageFile)
+	err = c.InitCompress(document["space_id"])
+	ext, folder := c.ext, c.folder
+	absPath := c.path
+	// ====================================解压全部文件=================================== 
+	logs.Error("===============")
+	logs.Error(folder)
+	logs.Error(ext)
+	logs.Error(absPath)
+	logs.Error(c.serveRoot)
+	c.GetFileList(true)
+	
+	
+	this.ServeJSON()
+	return 
+
+}
+
+
 // 提供压缩包文件预览功能	DataController PageController
 func (this *DataController) ViewPkg() {
 	pageFile := this.GetString("filePath", "")
-	absPath := utils.Document.GetAbsPageFileByPageFile(pageFile)
-	ext := strings.ToLower(path.Ext(pageFile))
-
-	var files FileList
-	var err error
-
-	if ext == ".zip" {
-		files, err = GetZipFileList(absPath)
-	} else if ext == ".tar" {
-		files, err = GetTarFileList(absPath)
-	} else if ext == ".gz" {
-		files, err = GetGZipFileList(absPath)
-	}
+	c := CreateCompressor(pageFile)
+	files, err := c.GetFileList(false)
 
 	if err == nil {
 		this.Data["json"] = files
 	}
 	this.ServeJSON()
-}
-
-// tar.gz格式内部有些文件夹可能带有./前缀
-func GetInnerFilePath(pageFile string, innerFile string) (string, string) {
-	iFile := innerFile
-	idx := strings.Index(innerFile, "./")
-	if idx != -1 {
-		iFile = innerFile[2:]
-	}
-	pagePath, filename := filepath.Split(pageFile)
-	filePath := filepath.Join(pagePath, "_temp", filename, iFile)
-	filePath = strings.ReplaceAll(filePath, "\\", "/")
-	return iFile, filePath
 }
 
 // 提供压缩包内部文件内容预览功能
@@ -701,7 +672,6 @@ func (this *DataController) ViewPkgFile() {
 	pageFile := this.GetString("file", "")
 	innerFile := this.GetString("innerFile", "")
 	absPath := utils.Document.GetAbsPageFileByPageFile(pageFile)
-	ext := strings.ToLower(path.Ext(pageFile))
 	_, filename := filepath.Split(pageFile)
 	iFile, _ := GetInnerFilePath(pageFile, innerFile)
 
@@ -716,241 +686,24 @@ func (this *DataController) ViewPkgFile() {
 		this.ServeJSON()
 		return 
 	}
-	ok, _ := utils.File.PathIsExists(dstPath)
+	ok, err := utils.File.PathIsExists(dstPath)
 	if !ok {
-		err := os.MkdirAll(dstPath, 0766)
+		err := utils.Document.CreateFolder(dstPath)
 		if err != nil {
 			this.Abort("创建临时目录失败，请联系管理员！")
 		}
 	}
-
-	dst, err := os.OpenFile(dstName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-	if err != nil {
+	dst := utils.Document.OpenFile(dstName)
+	if dst == nil {
 		this.Abort("创建目标文件失败，请联系管理员！")
 	}
 
-	if ext == ".zip" {
-		err = ExtractZipInnerFile(absPath, innerFile, dst)
-	} else if ext == ".tar" {
-		err = ExtractTarInnerFile(absPath, innerFile, dst)
-	} else if ext == ".gz" {
-		err = ExtractGZipInnerFile(absPath, innerFile, dst)
-	}
+	c := CreateCompressor(pageFile)
+	err = c.ExtractInnerFile(absPath, innerFile, dst)
 	dst.Close()
 
 	if err == nil {
 		this.Data["json"] = dstName
 	}
 	this.ServeJSON()
-}
-
-// ZIP解压单个文件
-func ExtractZipInnerFile(zipFile string, innerFile string, dst *os.File) error {
-	r, err := zip.OpenReader(zipFile)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-
-	for _, f := range r.File {
-		fName := GetFileNameUtf8(f)
-		if fName != innerFile {
-			continue
-		}
-
-		src, err := f.Open()
-		if err != nil {
-			return err
-		}
-		if _, err := io.Copy(dst, src); err != nil {
-			return err
-		}
-		src.Close()
-		break
-	}
-	return nil
-}
-
-// TAR解压单个文件
-func ExtractTarInnerFile(tarFile string, innerFile string, dst *os.File) error {
-	fr, err := os.Open(tarFile)
-	if err != nil {
-		return err
-	}
-	defer fr.Close()
-
-	return _ExtractTarInnerFile(nil, fr, innerFile, dst)
-}
-
-// GZIP解压单个文件
-func ExtractGZipInnerFile(gzFile string, innerFile string, dst *os.File) error {
-	fr, err := os.Open(gzFile)
-	if err != nil {
-		return err
-	}
-	defer fr.Close()
-
-	gr, err := gzip.NewReader(fr)
-	if err != nil {
-		return err
-	}
-	defer gr.Close()
-
-	// 单纯.gz文件，通常内部为单个文件
-	if IsGZ(gzFile) {
-		if _, err := io.Copy(dst, gr); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	return _ExtractTarInnerFile(gr, nil, innerFile, dst)
-}
-
-// TAR和GZIP解压单个文件通用过程
-func _ExtractTarInnerFile(gr *gzip.Reader, fr *os.File, innerFile string, dst *os.File) error {
-	var tr *tar.Reader
-	if fr == nil {
-		tr = tar.NewReader(gr)
-	} else {
-		tr = tar.NewReader(fr)
-	}
-
-	for {
-		h, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-
-		if h.Name != innerFile {
-			continue
-		}
-
-		if _, err := io.Copy(dst, tr); err != nil {
-			return err
-		}
-		break
-	}
-	return nil
-}
-
-// =========================================华丽丽分界线======================================================
-//解决文件名乱码问题，如果标示位是0，则是默认的本地编码，默认为gbk
-func GetFileNameUtf8(file *zip.File) string {
-	if file.Flags == 0 {
-		i := bytes.NewReader([]byte(file.Name))
-		decoder := transform.NewReader(i, simplifiedchinese.GB18030.NewDecoder())
-		content, _ := ioutil.ReadAll(decoder)
-		return string(content)
-	} else {
-		return file.Name
-	}
-}
-
-// ==========================================解压相关=========================================================
-// zip解压单个制定文件
-func UnZipOneFile(zipFile string, filename string) (FileList, error) {
-	zr, err := zip.OpenReader(zipFile)
-	defer zr.Close()
-	if err != nil {
-		return FileList{}, err
-	}
-
-	fs := newFileList(len(zr.File))
-	// TODO：此处遇到node_modules这样的极端目录是否影响效率？
-	for i, file := range zr.File {
-		fpath := GetFileNameUtf8(file)
-		fs.setValue(i, file.FileInfo(), fpath)
-	}
-	return fs, nil
-}
-
-// zip文件，仅获取文件列表
-func GetZipFileList(zipFile string) (FileList, error) {
-	zr, err := zip.OpenReader(zipFile)
-	defer zr.Close()
-	if err != nil {
-		return FileList{}, err
-	}
-
-	fs := newFileList(len(zr.File))
-	// TODO：此处遇到node_modules这样的极端目录是否影响效率？
-	for i, file := range zr.File {
-		fpath := GetFileNameUtf8(file)
-		fs.setValue(i, file.FileInfo(), fpath)
-	}
-	return fs, nil
-}
-
-// 获取tar和tar.gz文件列表通用过程
-// 不支持多态，只能用俩不同类型参数将就一下了
-func _GetTarFileList(gr *gzip.Reader, fr *os.File) (FileList, error) {
-	fs := FileList{}
-	var tr *tar.Reader
-	if fr == nil {
-		tr = tar.NewReader(gr)
-	} else {
-		tr = tar.NewReader(fr)
-	}
-
-	for {
-		h, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fs, err
-		}
-		fs.setValueD(h.FileInfo(), h.Name)
-	}
-	return fs, nil
-}
-
-// tar
-func GetTarFileList(tarFile string) (FileList, error) {
-	nf := FileList{}
-	fr, err := os.Open(tarFile)
-	if err != nil {
-		return nf, err
-	}
-	defer fr.Close()
-
-	return _GetTarFileList(nil, fr)
-}
-
-// tar.gz
-func GetGZipFileList(gzFile string) (FileList, error) {
-	fs := FileList{}
-	fr, err := os.Open(gzFile)
-	if err != nil {
-		return fs, err
-	}
-	defer fr.Close()
-
-	gr, err := gzip.NewReader(fr)
-	if err != nil {
-		return fs, err
-	}
-	defer gr.Close()
-
-	// 单纯.gz文件，通常内部为单个文件
-	if IsGZ(gzFile) {
-		fs.setValueD(nil, gr.Name)
-		return fs, nil
-	}
-
-	return _GetTarFileList(gr, nil)
-}
-
-// 判断单纯.gz后缀文件
-func IsGZ(name string) bool {
-	ps := strings.Split(strings.ToLower(name), ".")
-	l := len(ps)
-	if l > 1 && ps[l-1] == "gz" && ps[l-2] != "tar" {
-		return true
-	}
-	return false
 }
