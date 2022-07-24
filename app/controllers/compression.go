@@ -17,7 +17,7 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/logs"
+	// "github.com/astaxie/beego/logs"
 )
 
 
@@ -104,24 +104,27 @@ type Compressor struct {
 	name string
 	ext string
 	folder string
+	fileRoot string
 	serveRoot string
+	exist bool
 }
 
 func CreateCompressor(pageFile string) *Compressor {
 	absPath := utils.Document.GetAbsPageFileByPageFile(pageFile)
 	ext := strings.ToLower(path.Ext(pageFile))
 	_, filename := filepath.Split(pageFile)
-
+	
 	return &Compressor {
 		pageFile: pageFile,
 		path: absPath,
 		name: filename,
 		ext: ext,
+		exist: false,
 	}
 }
 
 // 用于线上解压
-func (c *Compressor) InitCompress(spaceId string) error {
+func (c *Compressor) InitCompress(spaceId string, extract bool) error {
 	ext := c.ext
 	// 获取除后缀外文件名，处理.tar.gz特殊情况
 	name := strings.TrimSuffix(c.name, path.Ext(c.pageFile))
@@ -140,22 +143,22 @@ func (c *Compressor) InitCompress(spaceId string) error {
 			return errors.New("创建服务目录失败，请联系管理员！")
 		}
 	}
-	c.serveRoot = filepath.Join(wwwRoot, c.folder)
-	// ===================================TODO：检查是否已存在==========================================
-	
 
-
-
-
-
-
-
-	err := utils.Document.CreateFolder(c.serveRoot)
-	if err != nil {
-		return err
+	c.fileRoot = filepath.Join(wwwRoot, c.folder)
+	c.serveRoot = filepath.Join("serve", spaceId, c.folder)
+	// 检测是否存在，也用于获取服务地址
+	c.exist, _ = utils.File.PathIsExists(c.fileRoot)
+	if extract {
+		if c.exist {
+			return errors.New("检测到已解压的目录，可能已被解压，若需覆盖请先点击清除后再次操作！")
+		}
+		if err := utils.Document.CreateFolder(c.fileRoot); err != nil {
+			return err
+		}		
 	}
 	return nil
 }
+
 
 // ==========================================解压相关=========================================================
 func (c *Compressor) GetFileList(extract bool) (FileList, error) {
@@ -270,7 +273,7 @@ func IsGZ(name string) bool {
 }
 
 func (c *Compressor) ExtractFile (fr FileReader, name string) error {	
-	dstName := filepath.Join(c.serveRoot, name)
+	dstName := filepath.Join(c.fileRoot, name)
 	if fr.IsDir() {
 		if err := utils.Document.CreateFolder(dstName); err != nil {
 			return err
@@ -282,7 +285,7 @@ func (c *Compressor) ExtractFile (fr FileReader, name string) error {
 }
 func (c *Compressor) CopyGZ (fr *gzip.Reader, ) error {
 	name := fr.Name
-	dstName := filepath.Join(c.serveRoot, name)
+	dstName := filepath.Join(c.fileRoot, name)
 	fd := utils.Document.OpenFile(dstName)
 	if fd == nil {
 		return errors.New("Open New File Failed")

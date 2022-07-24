@@ -21,6 +21,7 @@ import (
 	"github.com/simonblowsnow/mm-wiki-ex/app/models"
 	"github.com/simonblowsnow/mm-wiki-ex/app/services"
 	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
+	"github.com/astaxie/beego/context"
 	// "golang.org/x/text/encoding/simplifiedchinese"
 	// "golang.org/x/text/transform"
 
@@ -610,13 +611,8 @@ func RequestFile(self *PageController, pageFile string) {
 		dc, _ := utils.Document.GetContentByPageFile(pageFile)
 		documentContent = dc
 	}
-
-	href := self.Ctx.Request.Referer()
-	u, _ := url.Parse(href)
-	host := "http://" + u.Host
-	if href[:5] == "https" {
-		host = "https://" + u.Host
-	}
+	host := GetHost(self.Ctx)
+	
 	document := map[string]string{"type": "3"}
 
 	self.Data["document"] = document
@@ -627,32 +623,70 @@ func RequestFile(self *PageController, pageFile string) {
 	self.Data["page_content"] = documentContent
 }
 
-// 在线解压
-func (this *DataController) Decompress() {
-	documentId := this.GetString("document_id", "")
-	pageFile := this.GetString("file", "")
-	document, err := models.DocumentModel.GetDocumentByDocumentId(documentId)
-	if err != nil || len(document) == 0 {
-		return
+func GetHost(ctx *context.Context) string {
+	href := ctx.Request.Referer()
+	u, _ := url.Parse(href)
+	host := "http://" + u.Host
+	if href[:5] == "https" {
+		host = "https://" + u.Host
 	}
-	c := CreateCompressor(pageFile)
-	err = c.InitCompress(document["space_id"])
-	ext, folder := c.ext, c.folder
-	absPath := c.path
-	// ====================================解压全部文件=================================== 
-	logs.Error("===============")
-	logs.Error(folder)
-	logs.Error(ext)
-	logs.Error(absPath)
-	logs.Error(c.serveRoot)
-	c.GetFileList(true)
-	
-	
-	this.ServeJSON()
-	return 
-
+	return host
 }
 
+func ComCompress(self *DataController, extract bool) (*Compressor, error) {
+	documentId := self.GetString("document_id", "")
+	pageFile := self.GetString("file", "")
+	document, err := models.DocumentModel.GetDocumentByDocumentId(documentId)
+	if err != nil || len(document) == 0 {
+		return nil, errors.New("文件空间查找错误！")
+	}
+	c := CreateCompressor(pageFile)
+	err = c.InitCompress(document["space_id"], extract)
+	if extract && err == nil {
+		_, err = c.GetFileList(true)
+	}
+	return c, err
+}
+
+// 在线解压
+func (this *DataController) Decompress() {
+	if _, err := ComCompress(this, true); err != nil {
+		this.Abort(err.Error())
+	}
+	this.ServeJSON()
+}
+// 获取在线解压后的服务地址
+func (this *DataController) GetServeUrl() {
+	pre := this.GetString("pre", "")
+	c, err := ComCompress(this, false)
+	if err != nil {
+		this.Abort(err.Error())
+	}
+	if !c.exist && pre == "" {
+		this.Abort("该文件未解压，请先执行在线解压操作！")
+	}
+	
+	host := GetHost(this.Ctx)
+	url := strings.ReplaceAll(host + "/file/" + c.serveRoot, "\\", "/") 
+	this.Data["json"] = url
+	this.ServeJSON()
+}
+// 在线解压清除
+func (this *DataController) DelCompress() {
+	c, err := ComCompress(this, false)
+	if err != nil {
+		this.Abort(err.Error())
+	}
+	if !c.exist {
+		this.Abort("该文件未在线解压，无需清除！")
+	}
+	// 后边必须加个斜杠，否则会把上一级目录删除掉
+	err = utils.Document.Delete(c.serveRoot + "/", 2)
+	if err != nil {
+		this.Abort(err.Error())
+	}
+	this.ServeJSON()
+}
 
 // 提供压缩包文件预览功能	DataController PageController
 func (this *DataController) ViewPkg() {

@@ -104,14 +104,17 @@
                     </div>
                     <!-- 压缩包操作 -->
                     <div style="height: 50px; float: right; transform: translate(0px, -20px);  max-width: 100%;">
+
+                        <input type="hidden" id="fileWebUrl" value="">
+                        <input type="hidden" id="fileWebStatus" value="0">
                         <div class="btn-group" role="group" aria-label="..." style="float: right">
-                            <a type="button" id="decompression" class="btn btn-default" onclick="decompressFile()">
+                            <a type="button" id="decompression" class="btn btn-default" onclick="decompressFile()" title="在线解压后可生成在线服务地址">
                                 <i class="glyphicon glyphicon-folder-close"></i>&nbsp;在线解压
                             </a>
-                            <a type="button" id="webUrl" data-clipboard-text="Just" class="btn btn-default">
+                            <a type="button" id="webUrl" data-clipboard-text="copy" class="btn btn-default" onclick="getServeUrl()"> 
                                 <i class="glyphicon glyphicon-paperclip"></i>&nbsp;服务地址
                             </a>
-                            <a type="button" id="clearPkg" class="btn btn-default">
+                            <a type="button" id="clearPkg" class="btn btn-default"  onclick="DelCompress()">
                                 <i class="glyphicon glyphicon-floppy-remove"></i>&nbsp;清除
                             </a>
                         </div>
@@ -156,22 +159,27 @@
         });
     }
 
+    function setCopy(id, url, callback, noClick) {
+        $(id).attr("data-clipboard-text", url);
+        var clipboard = new ClipboardJS(id);
+        $(id).tipsy({fade: true, gravity: 'n', html: true, title: function () {
+            return "<div style='text-align: left; color: #ccc'>点击复制网络地址</div>" + callback();
+        }});
+        if (noClick) return;
+        $(id).click(function () {
+            showUrl(callback());
+        });
+    }
+
     // 【增加·文件地址复制功能】
     function init() {
         var fileExt = $("#fileExt").val();
         var filePath = $("#filePath").val();
         var url = getFileUrl();
-        // 复制地址
-        $("#clipBtn").attr("data-clipboard-text", url);
-        var clipboard = new ClipboardJS('#clipBtn');
-        $('#clipBtn').tipsy({fade: true, gravity: 'n', html: true, title: function () {
-            var url = getFileUrl();
-            return "<div style='text-align: left; color: #ccc'>点击复制文件地址</div>" + url;
-        }});
-        $('#clipBtn').click(function () {
-            showUrl(url);
+        // 复制文件地址
+        setCopy("#clipBtn", url, function(){
+            return getFileUrl();
         });
-        
 
         // html文件则显示打开按钮
         var ps = url.split(".");
@@ -183,39 +191,32 @@
         }
 
         if ($('#fileView').length > 0) loadFiletree(filePath);
-        
         if ($("#document_page_view").length > 0 && fileExt != ".html") TextViewInit();       
     };
     
     // 用于加载压缩包内的文件树
     function loadFiletree(filePath) {
         var serve = '/ViewPkg?filePath=' + filePath;
-        $("#loading").show();
-        $.ajax({
-            url: serve,
-            type:"get",
-            dataType : "json",      
-            success: function(data) {
-                console.log(data);
-                $('#fileView').jstree({
-                    'core' : {
-                        'data': FileList2Tree(data)
-                    },
-                    "themes": { "stripes": true },
-                    'types' : {
-                        'default' : { 'icon' : 'fa fa-folder' },
-                        'f-open' : { 'icon' : 'fa fa-folder-open fa-fw' },
-                        'f-closed' : { 'icon' : 'fa fa-folder fa-fw' },
-                        'folder' : { 'icon' : 'fa fa-folder' },
-                        'file' : { 'icon' : 'fa fa-file-text' }
-                    },
-                    "plugins": ["changed", "types"]
-                });
-            },
-            complete: function() {
-                $("#loading").hide();
-            }
+        ajaxData(serve, {}, function (data) {
+            console.log(data);
+            $('#fileView').jstree({
+                'core' : {
+                    'data': FileList2Tree(data)
+                },
+                "themes": { "stripes": true },
+                'types' : {
+                    'default' : { 'icon' : 'fa fa-folder' },
+                    'f-open' : { 'icon' : 'fa fa-folder-open fa-fw' },
+                    'f-closed' : { 'icon' : 'fa fa-folder fa-fw' },
+                    'folder' : { 'icon' : 'fa fa-folder' },
+                    'file' : { 'icon' : 'fa fa-file-text' }
+                },
+                "plugins": ["changed", "types"]
+            });
+            // 提前获取压缩包的网络服务地址，为复制按钮做准备
+            getServeUrl("pre");
         });
+
         $('#fileView').on("touchstart", ".jstree-anchor", function(e) {
             let node = $(e.currentTarget).parent();
             console.log(node);
@@ -225,16 +226,8 @@
             if ($(node).hasClass("jstree-open")) {
                 return $('#fileView').jstree('close_node', node);
             }
-            
-            console.log(node[0]);
-
         });
-        $('#fileView').on("touchstart", ".jstree-node", function(e){
-            // .jstree-icon.jstree-ocl   jstree-anchor jstree-clicked  .jstree-icon.fa-folder-open
-            // if ($(e.currentTarget).hasClass("jstree-closed")) {
-            //     $('#fileView').jstree('open_node', e.currentTarget);
-            // }
-        })
+        
         $("#fileView").on('open_node.jstree', function (event, data) {
             data.instance.set_type(data.node,'f-open');
         });
@@ -262,23 +255,8 @@
     // 请求压缩包内的单个文件内容，先请求解压，再请求解压后的文件内容
     function viewPkgFile(file, innerFilePath) {
         var param = {'file': file, 'innerFile': innerFilePath.join("/")};
-        var serve = '/ViewPkgFile';
-        $("#loading").show();
-        $.ajax({
-            url: serve,
-            data: param,
-            type:"get",
-            dataType : "json",      
-            success: function(data) {
-                console.log(data);
-                openPkgContent(param);
-            },
-            error: function(err) {
-                alert(err.responseText);
-            },
-            complete: function() {
-                $("#loading").hide();
-            }
+        ajaxData('/ViewPkgFile', param, function (data) {
+            openPkgContent(param);
         });
     }
 
@@ -303,17 +281,47 @@
         var filePath = $("#filePath").val();
         var fileId = $("#fileId").val();
         var param = {'file': filePath, 'document_id': fileId};
-        var serve = '/Decompress';
+        ajaxData('/Decompress', param, function (data) {
+
+        });
+    }
+
+    function getServeUrl(pre) {
+        var url = $("#fileWebUrl").val();
+        var status = $("#fileWebStatus").val();
+        var filePath = $("#filePath").val();
+        var fileId = $("#fileId").val();
+        var param = {'file': filePath, 'document_id': fileId, 'pre': pre || ''};
+        ajaxData('/GetServeUrl', param, function (data) {
+            var url = data;
+            $("#fileWebUrl").val(url);
+            if (pre) {
+                setCopy("#webUrl", url, function () { return url }, true);
+            } else {
+                $("#fileWebStatus").val("1");
+                showUrl(url);
+            }
+        });
+    }
+
+    function DelCompress() {
+        var filePath = $("#filePath").val();
+        var fileId = $("#fileId").val();
+        var param = {'file': filePath, 'document_id': fileId};
+        ajaxData('/DelCompress', param, function (data) {
+            console.log(data);
+        });
+    }
+
+    function ajaxData(url, param, callbackSuc, callbackErr) {
         $("#loading").show();
         $.ajax({
-            url: serve,
-            data: param,
-            type:"get",
-            dataType : "json",      
+            url: url, data: param, type:"get", dataType : "json",      
             success: function(data) {
-                console.log(data);
+                if (callbackSuc) callbackSuc(data);
             },
             error: function(err) {
+                if (callbackErr) callbackErr(err);
                 alert(err.responseText);
             },
             complete: function() {
@@ -321,7 +329,6 @@
             }
         });
     }
-
 
     $(function() {
         init();

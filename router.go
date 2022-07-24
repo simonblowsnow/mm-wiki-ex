@@ -25,6 +25,8 @@ func initRouter() {
 	// 新增纯Api方法
 	beego.Router("/ViewPkg", &controllers.DataController{}, "*:ViewPkg")
 	beego.Router("/Decompress", &controllers.DataController{}, "*:Decompress")
+	beego.Router("/GetServeUrl", &controllers.DataController{}, "*:GetServeUrl")
+	beego.Router("/DelCompress", &controllers.DataController{}, "*:DelCompress")
 	beego.Router("/ViewPkgFile", &controllers.DataController{}, "*:ViewPkgFile")
 
 	beego.AutoRouter(&controllers.AuthorController{})

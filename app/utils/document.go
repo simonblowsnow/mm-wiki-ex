@@ -190,15 +190,12 @@ func (d *document) Delete(path string, docType int) error {
 	defer d.lock.Unlock()
 
 	absPageFile := d.GetAbsPageFileByPageFile(path)
-
 	ok, _ := File.PathIsExists(absPageFile)
 	if !ok {
 		return nil
 	}
-
 	if docType == Document_Type_Dir {
 		return os.RemoveAll(filepath.Dir(absPageFile))
-
 	}
 	return os.Remove(absPageFile)
 }
