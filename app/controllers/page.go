@@ -17,11 +17,12 @@ import (
 	"strings"
 
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/context"
 	"github.com/simonblowsnow/mm-wiki-ex/app"
 	"github.com/simonblowsnow/mm-wiki-ex/app/models"
 	"github.com/simonblowsnow/mm-wiki-ex/app/services"
 	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
-	"github.com/astaxie/beego/context"
+
 	// "golang.org/x/text/encoding/simplifiedchinese"
 	// "golang.org/x/text/transform"
 
@@ -35,8 +36,14 @@ type DataController struct {
 	beego.Controller
 }
 
-var FILETYPES = utils.FILETYPES
+type DocInfo struct {
+	documentId string
+	pageFile   string
+	isEditor   bool
+	spaceId    string
+}
 
+var FILETYPES = utils.FILETYPES
 
 // ==================================================== 业务代码开始 ===================================================
 // document page view
@@ -122,7 +129,6 @@ func (this *PageController) View() {
 
 	collectionId := "0"
 	collection, err := models.CollectionModel.GetCollectionByUserIdTypeAndResourceId(this.UserId, models.Collection_Type_Doc, documentId)
-	//	logs.Error("," + "asasas")
 
 	if err != nil {
 		this.ErrorLog("查找文档 " + documentId + " 失败：" + err.Error())
@@ -139,7 +145,6 @@ func (this *PageController) View() {
 	if href[:5] == "https" {
 		host = "https://" + u.Host
 	}
-
 	this.Data["is_editor"] = isEditor
 	this.Data["space"] = space
 	this.Data["create_user"] = createUser
@@ -580,27 +585,31 @@ func sendEmail(documentId string, username string, comment string, url string) e
 // =====================================================通用View=============================================================
 // document page view common, 因去掉了繁琐的验证，可能被用于非法访问
 func (this *PageController) ViewCom() {
-	documentId := this.GetString("document_id", "")
-	document, _ := models.DocumentModel.GetDocumentByDocumentId(documentId)
-	_, pageFile, _ := models.DocumentModel.GetParentDocumentsByDocument(document)
-	RequestFile(this, pageFile)
+	info, err := GetDocInfo(this.BaseController)
+	if err != nil {
+		this.ViewError(err.Error())
+	}
+	RequestFile(this, info.pageFile, info)
 
 	this.viewLayout("page/viewCom", "document_view")
 }
 
 // 压缩包内部文件预览，已提前解压
 func (this *PageController) ViewPkgCom() {
-	pageFile := this.GetString("file", "")
+
+	info, err := GetDocInfo(this.BaseController)
+	if err != nil {
+		this.ViewError(err.Error())
+	}
 	innerFile := this.GetString("innerFile", "")
-	_, filePath := GetInnerFilePath(pageFile, innerFile)
-	RequestFile(this, filePath)
+	_, filePath := GetInnerFilePath(info.pageFile, innerFile)
+	RequestFile(this, filePath, info)
 
 	this.viewLayout("page/viewCom", "document_view")
 }
 
-
 // 文件请求通用过程
-func RequestFile(self *PageController, pageFile string) {
+func RequestFile(self *PageController, pageFile string, info DocInfo) {
 	ext := strings.ToLower(path.Ext(pageFile))
 	fileExt, flag := FILETYPES[ext]
 	documentContent := ""
@@ -612,9 +621,10 @@ func RequestFile(self *PageController, pageFile string) {
 		documentContent = dc
 	}
 	host := GetHost(self.Ctx)
-	
-	document := map[string]string{"type": "3"}
 
+	document := map[string]string{"type": "3"}
+	self.Data["space_id"] = info.spaceId
+	self.Data["document_id"] = info.documentId
 	self.Data["document"] = document
 	self.Data["file_type"] = document["type"]
 	self.Data["file_path"] = pageFile
@@ -655,6 +665,7 @@ func (this *DataController) Decompress() {
 	}
 	this.ServeJSON()
 }
+
 // 获取在线解压后的服务地址
 func (this *DataController) GetServeUrl() {
 	pre := this.GetString("pre", "")
@@ -665,12 +676,13 @@ func (this *DataController) GetServeUrl() {
 	if !c.exist && pre == "" {
 		this.Abort("该文件未解压，请先执行在线解压操作！")
 	}
-	
+
 	host := GetHost(this.Ctx)
-	url := strings.ReplaceAll(host + "/file/" + c.serveRoot, "\\", "/") 
+	url := strings.ReplaceAll(host+"/file/"+c.serveRoot, "\\", "/")
 	this.Data["json"] = url
 	this.ServeJSON()
 }
+
 // 在线解压清除
 func (this *DataController) DelCompress() {
 	c, err := ComCompress(this, false)
@@ -681,7 +693,7 @@ func (this *DataController) DelCompress() {
 		this.Abort("该文件未在线解压，无需清除！")
 	}
 	// 后边必须加个斜杠，否则会把上一级目录删除掉
-	err = utils.Document.Delete(c.serveRoot + "/", 2)
+	err = utils.Document.Delete(c.serveRoot+"/", 2)
 	if err != nil {
 		this.Abort(err.Error())
 	}
@@ -718,7 +730,7 @@ func (this *DataController) ViewPkgFile() {
 	flag, _ := utils.File.PathIsExists(dstName)
 	if flag {
 		this.ServeJSON()
-		return 
+		return
 	}
 	ok, err := utils.File.PathIsExists(dstPath)
 	if !ok {
@@ -740,4 +752,48 @@ func (this *DataController) ViewPkgFile() {
 		this.Data["json"] = dstName
 	}
 	this.ServeJSON()
+}
+
+// 通用过程
+func GetDocInfo(self BaseController) (DocInfo, error) {
+	res := DocInfo{}
+	documentId := self.GetString("document_id", "")
+	if documentId == "" {
+		return res, errors.New("文档未找到！")
+	}
+	res.documentId = documentId
+	document, err := models.DocumentModel.GetDocumentByDocumentId(documentId)
+	if err != nil {
+		return res, errors.New("查找文档 " + documentId + " 失败：" + err.Error())
+	}
+	if len(document) == 0 {
+		return res, errors.New("文档不存在！")
+	}
+
+	spaceId := document["space_id"]
+	space, err := models.SpaceModel.GetSpaceBySpaceId(spaceId)
+	if err != nil {
+		return res, errors.New("查找文档 " + documentId + " 所在空间失败：" + err.Error())
+	}
+	if len(space) == 0 {
+		return res, errors.New("文档所在空间不存在！")
+	}
+	res.spaceId = spaceId
+	// check space visit_level
+	isVisit, isEditor, _ := self.GetDocumentPrivilege(space)
+	if !isVisit {
+		return res, errors.New("您没有权限访问该空间！")
+	}
+	res.isEditor = isEditor
+
+	// get parent documents by document
+	parentDocuments, pageFile, err := models.DocumentModel.GetParentDocumentsByDocument(document)
+	if err != nil {
+		return res, errors.New("查找父文档失败：" + err.Error())
+	}
+	if len(parentDocuments) == 0 {
+		return res, errors.New("父文档不存在！")
+	}
+	res.pageFile = pageFile
+	return res, nil
 }

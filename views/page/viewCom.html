@@ -1,20 +1,22 @@
 
-<div class="panel-body md-view-box H100" >
+<div class="panel-body md-view-box H100 PadH">
     <!-- 文件地址及类型 -->
+    <input type="hidden" id="fileId" value="{{.document_id}}">
     <input type="hidden" id="fileType" value="{{.file_type}}">
     <input type="hidden" id="filePath" value="{{.file_path}}">
     <input type="hidden" id="fileUrl" value="{{.file_url}}">
     <input type="hidden" id="fileExt" value="{{.file_ext}}">
-
-    <!-- <div class="dir-preview-box" style="display: none;">
-        <div class="dir-preview-btn">
-            展开目录
-        </div>
-        <div class="page-view-dir-toc" id="page-view-dir-toc">
-
-        </div>
-    </div> -->
+    <input type="hidden" id="spaceId" value="{{.space_id}}">
     
+    <!-- 操作按钮 -->
+    <div style="position:absolute; height: 50px; right: 15px; top: 1px; display: block; z-index: 99999">
+        <div class="btn-group" role="group" aria-label="...">
+            <a type="button" id="saveFile" class="btn btn-default" onclick="saveExcel()">
+                <i class="glyphicon glyphicon-floppy-disk" style="color: #d60a0a"></i>&nbsp;保存
+            </a>
+        </div>
+    </div>
+
     <div class="H100" style="">
         <!-- image -->
         {{if eq .file_ext "image"}}
@@ -26,7 +28,7 @@
         {{else if eq .file_ext "word"}}
             <div id="viewWord"></div>
         {{else if eq .file_ext "excel"}}
-            <div id="viewExcel"></div>
+            <div id="viewExcel" style="width: 100%; height: 100%; min-height: 400px"></div>
         {{else if eq .file_ext "ppt"}}
             <div id="viewPPT"></div>
         {{else if eq .file_ext "code"}}
@@ -47,6 +49,7 @@
 <script type="text/javascript">
     hljs.highlightAll();
     var xspr; // = x_spreadsheet(document.getElementById('viewExcel'));
+    var saveIcon = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/PjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+PHN2ZyB0PSIxNTc3MTc3MDkyOTg4IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjI2NzgiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPjxkZWZzPjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+PC9zdHlsZT48L2RlZnM+PHBhdGggZD0iTTIxMy4zMzMzMzMgMTI4aDU5Ny4zMzMzMzRhODUuMzMzMzMzIDg1LjMzMzMzMyAwIDAgMSA4NS4zMzMzMzMgODUuMzMzMzMzdjU5Ny4zMzMzMzRhODUuMzMzMzMzIDg1LjMzMzMzMyAwIDAgMS04NS4zMzMzMzMgODUuMzMzMzMzSDIxMy4zMzMzMzNhODUuMzMzMzMzIDg1LjMzMzMzMyAwIDAgMS04NS4zMzMzMzMtODUuMzMzMzMzVjIxMy4zMzMzMzNhODUuMzMzMzMzIDg1LjMzMzMzMyAwIDAgMSA4NS4zMzMzMzMtODUuMzMzMzMzeiBtMzY2LjkzMzMzNCAxMjhoMzQuMTMzMzMzYTI1LjYgMjUuNiAwIDAgMSAyNS42IDI1LjZ2MTE5LjQ2NjY2N2EyNS42IDI1LjYgMCAwIDEtMjUuNiAyNS42aC0zNC4xMzMzMzNhMjUuNiAyNS42IDAgMCAxLTI1LjYtMjUuNlYyODEuNmEyNS42IDI1LjYgMCAwIDEgMjUuNi0yNS42ek0yMTMuMzMzMzMzIDIxMy4zMzMzMzN2NTk3LjMzMzMzNGg1OTcuMzMzMzM0VjIxMy4zMzMzMzNIMjEzLjMzMzMzM3ogbTEyOCAwdjI1NmgzNDEuMzMzMzM0VjIxMy4zMzMzMzNoODUuMzMzMzMzdjI5OC42NjY2NjdhNDIuNjY2NjY3IDQyLjY2NjY2NyAwIDAgMS00Mi42NjY2NjcgNDIuNjY2NjY3SDI5OC42NjY2NjdhNDIuNjY2NjY3IDQyLjY2NjY2NyAwIDAgMS00Mi42NjY2NjctNDIuNjY2NjY3VjIxMy4zMzMzMzNoODUuMzMzMzMzek0yNTYgMjEzLjMzMzMzM2g4NS4zMzMzMzMtODUuMzMzMzMzeiBtNDI2LjY2NjY2NyAwaDg1LjMzMzMzMy04NS4zMzMzMzN6IG0wIDU5Ny4zMzMzMzR2LTEyOEgzNDEuMzMzMzMzdjEyOEgyNTZ2LTE3MC42NjY2NjdhNDIuNjY2NjY3IDQyLjY2NjY2NyAwIDAgMSA0Mi42NjY2NjctNDIuNjY2NjY3aDQyNi42NjY2NjZhNDIuNjY2NjY3IDQyLjY2NjY2NyAwIDAgMSA0Mi42NjY2NjcgNDIuNjY2NjY3djE3MC42NjY2NjdoLTg1LjMzMzMzM3ogbTg1LjMzMzMzMyAwaC04NS4zMzMzMzMgODUuMzMzMzMzek0zNDEuMzMzMzMzIDgxMC42NjY2NjdIMjU2aDg1LjMzMzMzM3oiIHAtaWQ9IjI2NzkiIGZpbGw9IiMyYzJjMmMiPjwvcGF0aD48L3N2Zz4=';
 
     function init() {
         // 此处获取url前缀方式与Image和PDF文件类型不同
@@ -55,8 +58,7 @@
         if (fileExt == "word") {
             loadWord(url);
         } else if (fileExt == "excel") {
-            xspr = x_spreadsheet(document.getElementById('viewExcel'));
-            loadExcel(url);
+            loadExcel(url, 'viewExcel');
         } else if (fileExt == "ppt") {
             loadPPT(url);
         } else {
@@ -73,20 +75,132 @@
 	      docx.renderAsync(data, document.getElementById("viewWord")) // 渲染到页面
 	    });
     }
-    function loadExcel(url) {
-        // Spreadsheet.locale('zh-cn', zhCN);
-        // var xspr = x_spreadsheet(document.getElementById('viewExcel'));
-        var params = {method: 'get', responseType: 'arraybuffer', url: url};
+
+    /* 
+        加载Excel逻辑：初次加载，则返回Excel文件地址，通过文件加载；
+        若文件有改动，则保存文件到服务器，同时生成json数据文件；
+        后续通过网页请求表格则以json为主，通过文件地址请求表格以Excel文件为主（可能会有样式偏差）；
+    */
+    function requestExcel (url, id) {
+        var params = {};
         axios(params).then(res => {
-            var data = new Uint8Array(res.data);
-            var wb = XLSX.read(data, {type:"array"});
-            // 修复原框架一个莫名其妙的Bug，某些Excel文件加载会报错
-            wb.SheetNames = wb.SheetNames.filter(k => wb.Sheets[k]['!ref'] != undefined);
-            data = stox(wb);
-            /* convert to x-spreadsheet form */
-            xspr.loadData(data);
+
+        })
+    }
+    // 通过Excel加载文件
+    function loadExcel(url, id) {
+        LuckyExcel.transformExcelToLuckyByUrl(url, "部门.xlsx", function(exportJson, luckysheetfile) {
+            if(exportJson.sheets==null || exportJson.sheets.length==0){
+                return alert("Failed to read the content of the excel file, currently does not support xls files!");
+            }
+            window.luckysheet.destroy();
+            window.luckysheet.create({
+                container: id, 
+                showinfobar: false,
+                data: exportJson.sheets,
+                title: exportJson.info.name,
+                userInfo: exportJson.info.name.creator
+            });
         });
     }
+    // 加载JSON数据渲染在线表格
+    function loadExcelJson (url, id) {
+		var params = {method: 'get', url: url};
+		axios(params).then(res => {
+			window.luckysheet.destroy();
+			window.luckysheet.create({
+				container: id,
+				lang: 'zh',
+				showinfobar: false,
+				data: res.data,
+				title: "在线excel" // 设定表格名称
+			});
+		});
+	}
+    // 保存修改后的Excel文件到服务器
+    function saveExcel() {
+        return saveExcelJson();
+
+        exportExcel(luckysheet.getAllSheets(), "下载", function (data) {
+            uploadExcel(data);
+        });
+    }
+    // 在线表格导出json数据
+	function saveExcelJson(){
+		var options = luckysheet.getAllSheets() // 得到表的数据
+		var content = JSON.stringify(options);
+		console.log(content);
+        const data = new Blob([content], {
+          type: 'application/json;charset=utf-8'
+        });
+        uploadExcel(data);
+	}
+    // 保存Excel文件和json通用过程
+    function uploadExcel (data) {
+        var fileId = $("#fileId").val();
+        var sid = $("#spaceId").val();
+        let fd = new FormData()
+        fd.append('file1', data)
+        fd.append('document_id', fileId)
+        fd.append('space_id', sid)
+        axios("/document/UpdateFile", {method: "POST", data: fd}).then(function (res) {
+            debugger
+        }).catch(function (e) {
+            console.log(e);
+        });
+    }
+
+    function y () {
+        
+        compress(dts);
+
+        function compress () {
+            dts.forEach(d => compressData(d.data));
+        } 
+        
+        function compressData (data) {
+            var r = checkItem(data, true);
+            var res, c;
+            r.next(); // JS奇怪的机制，需要先进入
+            // process rows
+            data.forEach((d, i) => {
+                // process cols
+                c = checkItem(d, false).next().value;
+                if (c['nulls'].length == 1 && c['nulls'][0][0] == 0 && c['nulls'][0][1] == (d.length - 1)) c = null;
+                res = r.next(c);
+            });
+            res = r.next(c);
+            console.log(res);
+        }
+
+        function* checkItem(d, wait) {
+            var c = {"nulls": []}, ns = [];
+            var n = d.length - 1, empty = null;
+            for (var j = 0; j < d.length; j++) {
+                var e = wait ? yield : d[j];
+                if (e == empty) {
+                    if (ns.length == 0) ns.push(j);
+                } else {
+                    c[j] = e;
+                    if (ns.length == 1) ns = _set(c, ns, j - 1);
+                } 
+            };
+            var last = wait ? yield : d[n];
+            if (ns.length == 1 && last == empty) _set(c, ns, n);
+            return c;
+        }
+        
+        function _set(c, ns, i) {
+            if (ns[0] == i) {
+                c[i] = null;
+            } else {
+                c['nulls'].push([ns[0], i]);
+            }
+            return [];  // 只是为了少写一行代码
+        }
+
+    }
+
     function loadPPT(url) {
         console.log(url);
         

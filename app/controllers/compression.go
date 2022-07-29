@@ -3,9 +3,9 @@ package controllers
 import (
 	"archive/tar"
 	"archive/zip"
+	"bytes"
 	"compress/gzip"
 	"errors"
-	"bytes"
 	"io"
 	"io/ioutil"
 	"os"
@@ -13,30 +13,29 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/astaxie/beego"
 	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
-	"github.com/astaxie/beego"
 	// "github.com/astaxie/beego/logs"
 )
-
 
 // 实现多态
 type FileReader interface {
 	Reader() *tar.Reader
-	// Open() (interface{}, error, bool)
 	IsDir() bool
 	Copy(fw *os.File) (int64, error)
 }
 type GzFileReader struct {
 	reader *gzip.Reader
-	file *tar.Reader
-	info os.FileInfo
+	file   *tar.Reader
+	info   os.FileInfo
 }
 type ComFileReader struct {
 	reader *os.File
-	file *zip.File
+	file   *zip.File
 }
+
 func (g *GzFileReader) Reader() *tar.Reader {
 	return tar.NewReader(g.reader)
 }
@@ -51,7 +50,7 @@ func (c *ComFileReader) IsDir() bool {
 }
 func (g *GzFileReader) Copy(fw *os.File) (int64, error) {
 	return io.Copy(fw, g.file)
-}	
+}
 func (c *ComFileReader) Copy(fw *os.File) (int64, error) {
 	f, err := c.file.Open()
 	if err != nil {
@@ -63,12 +62,10 @@ func (c *ComFileReader) Copy(fw *os.File) (int64, error) {
 
 // decoder := mahonia.NewDecoder("gbk").ConvertString(s)
 
-
 type FileList struct {
 	Names []string `json: names`
 	Types []int    `json: types`
 }
-
 
 func (fl *FileList) setValue(i int, fi os.FileInfo, name string) {
 	fl.Names[i] = name
@@ -77,6 +74,7 @@ func (fl *FileList) setValue(i int, fi os.FileInfo, name string) {
 		fl.Types[i] = 1
 	}
 }
+
 // 因无法提前得知数组长度，只能通过动态添加方式
 func (fl *FileList) setValueD(fi os.FileInfo, name string) {
 	fl.Names = append(fl.Names, name)
@@ -97,29 +95,28 @@ func newFileList(count int) FileList {
 	return FileList{Names: names, Types: types}
 }
 
-
 type Compressor struct {
-	pageFile string
-	path string
-	name string
-	ext string
-	folder string
-	fileRoot string
+	pageFile  string
+	path      string
+	name      string
+	ext       string
+	folder    string
+	fileRoot  string
 	serveRoot string
-	exist bool
+	exist     bool
 }
 
 func CreateCompressor(pageFile string) *Compressor {
 	absPath := utils.Document.GetAbsPageFileByPageFile(pageFile)
 	ext := strings.ToLower(path.Ext(pageFile))
 	_, filename := filepath.Split(pageFile)
-	
-	return &Compressor {
+
+	return &Compressor{
 		pageFile: pageFile,
-		path: absPath,
-		name: filename,
-		ext: ext,
-		exist: false,
+		path:     absPath,
+		name:     filename,
+		ext:      ext,
+		exist:    false,
 	}
 }
 
@@ -132,7 +129,7 @@ func (c *Compressor) InitCompress(spaceId string, extract bool) error {
 		name = name[:len(name)-4]
 	}
 	c.folder = name
-	
+
 	// 检查服务根目录是否存在
 	docRootDir := beego.AppConfig.String("document::root_dir")
 	wwwRoot := filepath.Join(docRootDir, "markdowns/serve", spaceId)
@@ -154,11 +151,10 @@ func (c *Compressor) InitCompress(spaceId string, extract bool) error {
 		}
 		if err := utils.Document.CreateFolder(c.fileRoot); err != nil {
 			return err
-		}		
+		}
 	}
 	return nil
 }
-
 
 // ==========================================解压相关=========================================================
 func (c *Compressor) GetFileList(extract bool) (FileList, error) {
@@ -188,7 +184,7 @@ func (c *Compressor) GetZipFileList(zipFile string, extract bool) (FileList, err
 	for i, file := range zr.File {
 		fpath := GetFileNameUtf8(file)
 		// 解压模式过程
-		if (extract) {
+		if extract {
 			zr := &ComFileReader{file: file}
 			c.ExtractFile(zr, fpath)
 			continue
@@ -235,12 +231,12 @@ func (c *Compressor) GetGZipFileList(gzFile string, extract bool) (FileList, err
 		fs.setValueD(nil, gr.Name)
 		return fs, nil
 	}
-	
+
 	return c._GetTarFileList(&GzFileReader{reader: gr}, extract)
 }
 
 // 获取tar和tar.gz文件列表通用过程
-func (c *Compressor) _GetTarFileList(fr FileReader, extract bool) (FileList, error) {	
+func (c *Compressor) _GetTarFileList(fr FileReader, extract bool) (FileList, error) {
 	fs := FileList{}
 	tr := fr.Reader()
 	for {
@@ -252,7 +248,7 @@ func (c *Compressor) _GetTarFileList(fr FileReader, extract bool) (FileList, err
 			return fs, err
 		}
 		// 解压模式过程
-		if (extract) {
+		if extract {
 			cr := &GzFileReader{file: tr, info: h.FileInfo()}
 			c.ExtractFile(cr, h.Name)
 			continue
@@ -272,7 +268,7 @@ func IsGZ(name string) bool {
 	return false
 }
 
-func (c *Compressor) ExtractFile (fr FileReader, name string) error {	
+func (c *Compressor) ExtractFile(fr FileReader, name string) error {
 	dstName := filepath.Join(c.fileRoot, name)
 	if fr.IsDir() {
 		if err := utils.Document.CreateFolder(dstName); err != nil {
@@ -283,7 +279,7 @@ func (c *Compressor) ExtractFile (fr FileReader, name string) error {
 	}
 	return nil
 }
-func (c *Compressor) CopyGZ (fr *gzip.Reader, ) error {
+func (c *Compressor) CopyGZ(fr *gzip.Reader) error {
 	name := fr.Name
 	dstName := filepath.Join(c.fileRoot, name)
 	fd := utils.Document.OpenFile(dstName)
@@ -297,19 +293,18 @@ func (c *Compressor) CopyGZ (fr *gzip.Reader, ) error {
 	return nil
 }
 
-func CopyFile (fr FileReader, dstName string) error {
+func CopyFile(fr FileReader, dstName string) error {
 	fd := utils.Document.OpenFile(dstName)
 	if fd == nil {
 		return errors.New("Open New File Failed")
 	}
-	
+
 	if _, err := fr.Copy(fd); err != nil {
 		return err
 	}
 	fd.Close()
 	return nil
 }
-
 
 // ================================================单文件提取===============================================
 // tar.gz格式内部有些文件夹可能带有./前缀
@@ -443,5 +438,3 @@ func GetFileNameUtf8(file *zip.File) string {
 		return file.Name
 	}
 }
-
-

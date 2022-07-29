@@ -602,12 +602,20 @@ mark {
 .H100 {
     height: 100%;
 }
-
+.PadH {
+    padding-top: 1px;
+    padding-left: 15px;
+    padding-right: 15px;
+}
 
 @media screen and (max-width: 830px) {
     .page-view-content{
         height: calc(100% - 165px);
     }    
+    .PadH {
+        padding-left: 1px;
+        padding-right: 1px;
+    }
 }
 @media screen and (min-width: 830px) {
     .page-view-content{

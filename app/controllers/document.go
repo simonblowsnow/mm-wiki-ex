@@ -1,12 +1,13 @@
 package controllers
 
 import (
-	"os"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/astaxie/beego/logs"
 	"github.com/simonblowsnow/mm-wiki-ex/app/services"
 
 	"github.com/simonblowsnow/mm-wiki-ex/app/models"
@@ -430,9 +431,9 @@ func (this *DocumentController) updateDocSequence(moveType string, document map[
 
 // delete document
 func (this *DocumentController) Delete() {
-	
+
 	documentId := this.GetString("document_id", "0")
-	
+
 	if documentId == "0" {
 		this.jsonError("没有选择文档！")
 	}
@@ -488,7 +489,7 @@ func (this *DocumentController) Delete() {
 		if flag {
 			os.RemoveAll(tempPath)
 		}
-	}	
+	}
 
 	// delete attachment
 	err = models.AttachmentModel.DeleteAttachmentsDBFileByDocumentId(documentId)
@@ -509,7 +510,6 @@ func (this *DocumentController) Delete() {
 // 注·九成以上代码来自于Save()方法
 // upload file
 func (this *DocumentController) Upload() {
-
 	if !this.IsPost() {
 		this.ViewError("请求方式有误！", "/main/index")
 	}
@@ -593,4 +593,25 @@ func (this *DocumentController) Upload() {
 	}
 	this.InfoLog("上传文档 " + utils.Convert.IntToString(documentId, 10) + " 成功")
 	this.jsonSuccess("上传文档成功", nil, "/document/index?document_id="+utils.Convert.IntToString(documentId, 10))
+}
+
+func (this *DocumentController) UpdateFile() {
+	if !this.IsPost() {
+		this.ViewError("请求方式有误！", "/main/index")
+	}
+	info, err := GetDocInfo(this.BaseController)
+	if err != nil {
+		this.ViewError(err.Error())
+	}
+	//
+
+	absFilePath := utils.Document.GetAbsPageFileByPageFile(info.pageFile)
+	folder, name := filepath.Split(absFilePath)
+
+	logs.Error(info.pageFile)
+	logs.Error(folder)
+	logs.Error(absFilePath)
+
+	this.SaveToFile("file1", folder+"/.~"+name)
+	this.jsonSuccess("上传文档成功")
 }
