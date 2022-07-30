@@ -133,7 +133,9 @@
 <script src="/static/plugins/md-toc/md-toc.js"></script>
 <script src='/static/plugins/jquery-tipsy/javascripts/jquery.tipsy.js'></script>
 <script src="/static/plugins/clipboard/clipboard.min.js"></script>
+<script type="text/javascript" src="/static/js/common/utils.js"></script>
 <script type="text/javascript" src="/static/js/modules/view.js"></script>
+
 
 
 <script type="text/javascript">
@@ -284,7 +286,7 @@
         var fileId = $("#fileId").val();
         var param = {'file': filePath, 'document_id': fileId};
         ajaxData('/Decompress', param, function (data) {
-
+            ShowMessage("解压成功！", 1);
         });
     }
 
@@ -311,7 +313,7 @@
         var fileId = $("#fileId").val();
         var param = {'file': filePath, 'document_id': fileId};
         ajaxData('/DelCompress', param, function (data) {
-            console.log(data);
+            ShowMessage("清除成功，服务地址已失效！", 1);
         });
     }
 

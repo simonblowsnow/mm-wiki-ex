@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -422,10 +423,15 @@ func (d *Document) UpdateDBAndFile(documentId string, spaceId string, document m
 	if updateValue["name"].(string) != document["name"] {
 		nameIsChange = true
 	}
-	err = utils.Document.Update(oldPageFile, updateValue["name"].(string), documentContent, docType, nameIsChange)
-	if err != nil {
-		tx.Rollback()
-		return
+
+	// Excel文件的更新逻辑特别，采用文件上传方式
+	flag := strings.ToLower(path.Ext(oldPageFile)) == ".xlsx"
+	if !flag {
+		err = utils.Document.Update(oldPageFile, updateValue["name"].(string), documentContent, docType, nameIsChange)
+		if err != nil {
+			tx.Rollback()
+			return
+		}
 	}
 
 	// commit

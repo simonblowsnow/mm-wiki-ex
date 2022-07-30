@@ -11,9 +11,11 @@
     <!-- 操作按钮 -->
     <div style="position:absolute; height: 50px; right: 15px; top: 1px; display: block; z-index: 99999">
         <div class="btn-group" role="group" aria-label="...">
+            {{if eq .file_ext "excel"}}
             <a type="button" id="saveFile" class="btn btn-default" onclick="saveExcel()">
                 <i class="glyphicon glyphicon-floppy-disk" style="color: #d60a0a"></i>&nbsp;保存
             </a>
+            {{end}}
         </div>
     </div>
 
@@ -44,7 +46,9 @@
     
 </div>
 
+<script type="text/javascript" src="/static/js/common/utils.js"></script>
 <script type="text/javascript" src="/static/js/modules/view.js"></script>
+
 
 <script type="text/javascript">
     hljs.highlightAll();
@@ -58,7 +62,7 @@
         if (fileExt == "word") {
             loadWord(url);
         } else if (fileExt == "excel") {
-            loadExcel(url, 'viewExcel');
+            requestExcel(url, 'viewExcel');
         } else if (fileExt == "ppt") {
             loadPPT(url);
         } else {
@@ -76,130 +80,81 @@
 	    });
     }
 
-    /* 
+    /* ================================================ Excel·处理 ===================================================
         加载Excel逻辑：初次加载，则返回Excel文件地址，通过文件加载；
         若文件有改动，则保存文件到服务器，同时生成json数据文件；
         后续通过网页请求表格则以json为主，通过文件地址请求表格以Excel文件为主（可能会有样式偏差）；
     */
     function requestExcel (url, id) {
-        var params = {};
+        var params = {method: 'get', url: url + ".json"};
+        // TODO：使用尝试404会不会造成性能损失
         axios(params).then(res => {
-
-        })
+            // 使用json渲染
+            initSheet(id, res.data, "在线表格");
+        }).catch(e => {
+            // 不存在json，请求原Excel文件
+            if (e.response && e.response.status == 404) {
+                loadExcel(url, id);
+            }
+        });
+    }
+    function initSheet(id, data, title) {
+        window.luckysheet.destroy();
+        window.luckysheet.create({
+            container: id, 
+            lang: 'zh',
+            showinfobar: false,
+            data: data,
+            title: title
+            // userInfo: exportJson.info.name.creator
+        });
     }
     // 通过Excel加载文件
     function loadExcel(url, id) {
-        LuckyExcel.transformExcelToLuckyByUrl(url, "部门.xlsx", function(exportJson, luckysheetfile) {
+        LuckyExcel.transformExcelToLuckyByUrl(url, "下载.xlsx", function(exportJson, luckysheetfile) {
             if(exportJson.sheets==null || exportJson.sheets.length==0){
                 return alert("Failed to read the content of the excel file, currently does not support xls files!");
             }
-            window.luckysheet.destroy();
-            window.luckysheet.create({
-                container: id, 
-                showinfobar: false,
-                data: exportJson.sheets,
-                title: exportJson.info.name,
-                userInfo: exportJson.info.name.creator
-            });
+            initSheet(id, exportJson.sheets, exportJson.info.name);
         });
     }
-    // 加载JSON数据渲染在线表格
-    function loadExcelJson (url, id) {
-		var params = {method: 'get', url: url};
-		axios(params).then(res => {
-			window.luckysheet.destroy();
-			window.luckysheet.create({
-				container: id,
-				lang: 'zh',
-				showinfobar: false,
-				data: res.data,
-				title: "在线excel" // 设定表格名称
-			});
-		});
-	}
-    // 保存修改后的Excel文件到服务器
+    // 保存修改后的Excel数据到服务器，含文件和json
     function saveExcel() {
-        return saveExcelJson();
-
+        saveExcelJson();
         exportExcel(luckysheet.getAllSheets(), "下载", function (data) {
-            uploadExcel(data);
+            uploadExcel(data, "xlsx");
         });
     }
     // 在线表格导出json数据
 	function saveExcelJson(){
 		var options = luckysheet.getAllSheets() // 得到表的数据
-		var content = JSON.stringify(options);
-		console.log(content);
+		ExcelCompress.compress(options);
+        
+        // ExcelCompress.decompress(options);
+        
+        var content = JSON.stringify(options);
         const data = new Blob([content], {
-          type: 'application/json;charset=utf-8'
+            type: 'application/json;charset=utf-8'
         });
-        uploadExcel(data);
+        uploadExcel(data, "json");
 	}
-    // 保存Excel文件和json通用过程
-    function uploadExcel (data) {
+    // 保存Excel文件和json通用上传过程
+    function uploadExcel (data, fType) {
         var fileId = $("#fileId").val();
         var sid = $("#spaceId").val();
-        let fd = new FormData()
-        fd.append('file1', data)
-        fd.append('document_id', fileId)
-        fd.append('space_id', sid)
+        let fd = new FormData();
+        fd.append('file1', data);
+        fd.append('document_id', fileId);
+        fd.append('space_id', sid);
+        fd.append('fType', fType);
         axios("/document/UpdateFile", {method: "POST", data: fd}).then(function (res) {
-            debugger
+            if (res.data.code !=undefined && res.data.code.toString() == '0') return alert(res.data.message);
+            if (fType == "xlsx") ShowMessage("保存成功！", 1);
         }).catch(function (e) {
             console.log(e);
         });
     }
-
-    function y () {
-        
-        compress(dts);
-
-        function compress () {
-            dts.forEach(d => compressData(d.data));
-        } 
-        
-        function compressData (data) {
-            var r = checkItem(data, true);
-            var res, c;
-            r.next(); // JS奇怪的机制，需要先进入
-            // process rows
-            data.forEach((d, i) => {
-                // process cols
-                c = checkItem(d, false).next().value;
-                if (c['nulls'].length == 1 && c['nulls'][0][0] == 0 && c['nulls'][0][1] == (d.length - 1)) c = null;
-                res = r.next(c);
-            });
-            res = r.next(c);
-            console.log(res);
-        }
-
-        function* checkItem(d, wait) {
-            var c = {"nulls": []}, ns = [];
-            var n = d.length - 1, empty = null;
-            for (var j = 0; j < d.length; j++) {
-                var e = wait ? yield : d[j];
-                if (e == empty) {
-                    if (ns.length == 0) ns.push(j);
-                } else {
-                    c[j] = e;
-                    if (ns.length == 1) ns = _set(c, ns, j - 1);
-                } 
-            };
-            var last = wait ? yield : d[n];
-            if (ns.length == 1 && last == empty) _set(c, ns, n);
-            return c;
-        }
-        
-        function _set(c, ns, i) {
-            if (ns[0] == i) {
-                c[i] = null;
-            } else {
-                c['nulls'].push([ns[0], i]);
-            }
-            return [];  // 只是为了少写一行代码
-        }
-
-    }
+    // ===========================================End Excel=============================================
 
     function loadPPT(url) {
         console.log(url);

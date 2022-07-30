@@ -41,6 +41,7 @@ type DocInfo struct {
 	pageFile   string
 	isEditor   bool
 	spaceId    string
+	document   map[string]string
 }
 
 var FILETYPES = utils.FILETYPES
@@ -91,7 +92,8 @@ func (this *PageController) View() {
 	// 判断文件类型
 	ext := strings.ToLower(path.Ext(pageFile))
 	fileExt, flag := FILETYPES[ext]
-	documentContent := ""
+	documentContent := "该类型文件不支持预览！"
+
 	// 已识别的非文本标准格式文件，不读其内容
 	if !flag || ext == ".md" {
 		fileExt = ext
@@ -104,7 +106,6 @@ func (this *PageController) View() {
 		}
 		documentContent = dc
 	}
-	logs.Error("Test Content")
 
 	// get edit user and create user
 	users, err := models.UserModel.GetUsersByUserIds([]string{document["create_user_id"], document["edit_user_id"]})
@@ -769,6 +770,7 @@ func GetDocInfo(self BaseController) (DocInfo, error) {
 	if len(document) == 0 {
 		return res, errors.New("文档不存在！")
 	}
+	res.document = document
 
 	spaceId := document["space_id"]
 	space, err := models.SpaceModel.GetSpaceBySpaceId(spaceId)

@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/astaxie/beego/logs"
 	"github.com/simonblowsnow/mm-wiki-ex/app/services"
 
 	"github.com/simonblowsnow/mm-wiki-ex/app/models"
@@ -568,7 +567,7 @@ func (this *DocumentController) Upload() {
 		"parent_id": parentId, "space_id": spaceId, "name": "", "type": "1",
 		"path": parentDocument["path"] + "," + parentId,
 	}
-	_, pageFile, err := d.GetParentDocumentsByDocument(doc)
+	_, pageFile, _ := d.GetParentDocumentsByDocument(doc)
 	absFilePath := utils.Document.GetAbsPageFileByPageFile(pageFile)
 	folder, _ := filepath.Split(absFilePath)
 
@@ -599,19 +598,31 @@ func (this *DocumentController) UpdateFile() {
 	if !this.IsPost() {
 		this.ViewError("请求方式有误！", "/main/index")
 	}
+	fType := this.GetString("fType", "xlsx")
 	info, err := GetDocInfo(this.BaseController)
 	if err != nil {
 		this.ViewError(err.Error())
 	}
-	//
 
 	absFilePath := utils.Document.GetAbsPageFileByPageFile(info.pageFile)
 	folder, name := filepath.Split(absFilePath)
+	// json文件是附属文件，无需写入日志，直接返回，且未返回信息给前端
+	if fType == "json" {
+		this.SaveToFile("file1", folder+"/"+name+".json")
+		return
+	}
 
-	logs.Error(info.pageFile)
-	logs.Error(folder)
-	logs.Error(absFilePath)
+	this.SaveToFile("file1", folder+"/"+name)
+	// 日志相关
+	updateValue := map[string]interface{}{
+		"name": name, "edit_user_id": this.UserId,
+	}
+	_, err = models.DocumentModel.UpdateDBAndFile(info.documentId, info.spaceId, info.document, "", updateValue, "")
+	if err != nil {
+		this.ErrorLog("修改文档 " + info.documentId + " 失败：" + err.Error())
+		this.jsonError("修改文档失败！")
+	}
 
-	this.SaveToFile("file1", folder+"/.~"+name)
-	this.jsonSuccess("上传文档成功")
+	this.InfoLog("修改文档 " + info.documentId + " 成功")
+	this.jsonSuccess("修改文档成功")
 }
