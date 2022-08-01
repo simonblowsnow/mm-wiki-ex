@@ -21,3 +21,25 @@
         })
     }, 4000);
 }
+
+// 根据URL下载文件
+function DownloadFile(url, name) {
+    if (name == undefined) {
+        var ps = url.split(/[/\\]/);
+        name = ps[ps.length - 1];
+    }
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true); //get请求，请求地址，是否异步
+    xhr.responseType = "blob";  // 返回类型blob
+    xhr.onload = function () {  // 请求完成处理函数
+        if (this.status === 200) {
+            var blob = this.response;   // 获取返回值
+            var a = document.createElement('a');
+            a.download = name;
+            a.href=window.URL.createObjectURL(blob);
+            a.click();
+        }
+    };
+    // 发送ajax请求
+    xhr.send();
+}

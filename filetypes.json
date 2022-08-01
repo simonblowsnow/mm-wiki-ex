@@ -95,5 +95,6 @@
 	".rpm": 	"other",
 	".ko": 		"other",
 	".so": 		"other",
+	".orig": 	"other",
 	".o": 		"other"
 }

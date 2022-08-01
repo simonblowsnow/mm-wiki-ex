@@ -545,22 +545,22 @@ func (this *DocumentController) Upload() {
 		this.jsonError("父文档不是目录！")
 	}
 
-	// check document name
-	document, err := d.GetDocumentByNameParentIdAndSpaceId("Readme", parentId, spaceId, 1)
-	if err != nil {
-		this.ErrorLog("创建保存文档失败：" + err.Error())
-		this.jsonError("创建文档失败！")
-	}
-	if len(document) != 0 {
-		this.jsonError("该文档名称已经存在！")
-	}
-
 	f, h, err := this.GetFile("file1")
 	if err != nil {
 		this.jsonError("获取上传文件失败！")
 	}
 	defer f.Close()
 	filename := h.Filename
+
+	// check document name "Readme"
+	document, err := d.GetDocumentByNameParentIdAndSpaceId(filename, parentId, spaceId, 3)
+	if err != nil {
+		this.ErrorLog("创建保存文档" + filename + "失败：" + err.Error())
+		this.jsonError("创建文档失败！")
+	}
+	if len(document) != 0 {
+		this.jsonError("上传失败，该目录下文档名称'" + filename + "'已经存在，请检查！")
+	}
 
 	// 获取文件目录绝对路径
 	doc := map[string]string{

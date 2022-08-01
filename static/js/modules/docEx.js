@@ -10,6 +10,18 @@ $(document).ready(function () {
         }
     });
     
+    // 文件上传成功
+    $('#fileUploads').on("fileuploaded", function (event, data, previewId, index) {   // fileuploaded  filepreupload
+        const res = data.response;
+        if (res.code == 0) {
+            return alert(res.message);
+        }
+        if (res.code && res.redirect && res.redirect != "") {
+            setTimeout(function () {
+                window.location.href = res.redirect.url;
+            }, res.redirect.sleep);
+        }
+    })
 
 });
 

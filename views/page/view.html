@@ -137,7 +137,6 @@
 <script type="text/javascript" src="/static/js/modules/view.js"></script>
 
 
-
 <script type="text/javascript">
     Layers.bindIframe("[name='history']", "文档修改历史", "508px", "1000px");
     $("[data-toggle='web-popover']").webuiPopover({animation: 'pop', autoHide:3000});
@@ -155,7 +154,8 @@
             maxmin: true,
             area: ["450px", "200px"],
             content: "<div><div style='height: 40px; margin-top: 25px'>已复制到剪切板，您也可" + 
-                "<a target='_blank' href='"+ url + "'>直接点击访问或下载</a></div>" + 
+                "<a target='_blank' href='"+ url + "'>直接点击访问</a>或" + 
+                '<a onclick="DownloadFile(' + "'" + url + "'" + ')">下载</a></div>' + 
                 "<div><input type='text' style='width: 400px; height: 35px' value='" + url + "'/></div></div>",
             padding: "10px"
         });
@@ -290,6 +290,7 @@
         });
     }
 
+    // 获取在线解压后形成的服务地址
     function getServeUrl(pre) {
         var url = $("#fileWebUrl").val();
         var status = $("#fileWebStatus").val();
@@ -303,7 +304,7 @@
                 setCopy("#webUrl", url, function () { return url }, true);
             } else {
                 $("#fileWebStatus").val("1");
-                showUrl(url);
+                showUrl(url + "/");
             }
         });
     }

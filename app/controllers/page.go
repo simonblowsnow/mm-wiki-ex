@@ -94,10 +94,16 @@ func (this *PageController) View() {
 	fileExt, flag := FILETYPES[ext]
 	documentContent := "该类型文件不支持预览！"
 
-	// 已识别的非文本标准格式文件，不读其内容
-	if !flag || ext == ".md" {
+	absPath := utils.Document.GetAbsPageFileByPageFile(pageFile)
+	fileInfo, err := os.Stat(absPath)
+	// 未识别的文件，大小超过限制则不读取其内容，大约6M
+	// TODO：文件读取上限大小使用配置文件参数
+	if !flag && err == nil && fileInfo.Size() > 7000000 {
+		flag = true
+	}
+	// 仅未识别的文件或md格式文件，读取其内容，md大于10M也不再读
+	if (!flag || ext == ".md") && fileInfo.Size() < 12000000 {
 		fileExt = ext
-		// get document content
 		dc, err := utils.Document.GetContentByPageFile(pageFile)
 		if err != nil {
 			this.ErrorLog("查找文档 " + documentId + " 失败：" + err.Error())
@@ -105,6 +111,11 @@ func (this *PageController) View() {
 			return
 		}
 		documentContent = dc
+	}
+
+	// 某些已知的非文本型文件不提供编辑功能
+	if fileExt == "other" {
+		isEditor = false
 	}
 
 	// get edit user and create user

@@ -5,11 +5,14 @@
 
         <!-- 【新增·Tab选择器】 -->
         <div style="text-align: center; height: 30px; margin-bottom: 5px; border-bottom: 1px solid #eee;">
-            <div id="tabNew" class="tabView tabActive" style="width: 50%;  border-right: 1px solid #ccc;" onclick="Form.clickTab(0)">
+            <div id="tabNew" class="tabView tabActive" style="width: 33%;  border-right: 1px solid #ccc;" onclick="Form.clickTab(0)">
                 新  建
             </div>
-            <div id="tabUpload" class="tabView" style="width: 48%;" onclick="Form.clickTab(1)">
+            <div id="tabUpload" class="tabView" style="width: 33%;" onclick="Form.clickTab(1)">
                 上传文件
+            </div>
+            <div id="tabFork" class="tabView" style="width: 33%;" onclick="Form.clickTab(2)">
+                云转储
             </div>
         </div>
 
@@ -71,6 +74,19 @@
                         <div class="file-loading">
                             <input id="fileUploads" name="file1" type="file" multiple data-min-file-count="1" 
                             data-preview-file-type="any" data-upload-url="/document/upload" data-theme="fas">
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- 上传文件界面 -->
+        <div id="tabPanelFork" class="panel-body" style="display: none; ">
+            <form enctype="multipart/form-data" class="form-horizontal" method="post" action="">
+                <div style="min-height: 200px;">
+                    <div class="form-group">
+                        <div class="file-loading">
+                            该功能暂未开放
                         </div>
                     </div>
                 </div>

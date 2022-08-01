@@ -87,13 +87,24 @@ Form.clickTab = function (idx) {
     if (idx == 0) {
         $("#tabPanelNew").show();
         $("#tabPanelUpload").hide();
+        $("#tabPanelFork").hide();
         $("#tabNew").addClass("tabActive");
         $("#tabUpload").removeClass("tabActive");
-    } else {
+        $("#tabFork").removeClass("tabActive");
+    } else if (idx == 1) {
         $("#tabPanelNew").hide();
         $("#tabPanelUpload").show();
+        $("#tabPanelFork").hide();
         $("#tabNew").removeClass("tabActive");
         $("#tabUpload").addClass("tabActive");
+        $("#tabFork").removeClass("tabActive");
+    } else {
+        $("#tabPanelNew").hide();
+        $("#tabPanelUpload").hide();
+        $("#tabPanelFork").show();
+        $("#tabNew").removeClass("tabActive");
+        $("#tabUpload").removeClass("tabActive");
+        $("#tabFork").addClass("tabActive");
     }
-    
+
 }
