@@ -1,12 +1,6 @@
 package controllers
 
 import (
-	// "archive/tar"
-	// "archive/zip"
-	// "bytes"
-	// "compress/gzip"
-	// "io"
-	// "io/ioutil"
 	"errors"
 	"fmt"
 	"net/url"
@@ -14,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/astaxie/beego"
@@ -179,6 +174,7 @@ func (this *PageController) View() {
 func (this *PageController) Edit() {
 
 	documentId := this.GetString("document_id", "")
+	innerFile := this.GetString("innerFile", "")
 	if documentId == "" {
 		this.ViewError("文档未找到！")
 	}
@@ -214,6 +210,21 @@ func (this *PageController) Edit() {
 		this.ViewError("查找父文档失败！")
 	}
 
+	// 增加编辑压缩包内解压的文件功能
+	this.Data["inner_file"] = "0"
+	if innerFile != "" {
+		c, err := ComCompress(this.Controller, false)
+		if err != nil {
+			this.Abort(err.Error())
+		}
+		if !c.exist {
+			this.ViewError("该文件未解压，请先执行在线解压操作！")
+		}
+		pageFile = filepath.Join(c.serveRoot, innerFile)
+		document["name"] = innerFile
+		this.Data["inner_file"] = "1"
+	}
+
 	// get document content
 	documentContent, err := utils.Document.GetContentByPageFile(pageFile)
 	if err != nil {
@@ -233,7 +244,6 @@ func (this *PageController) Edit() {
 
 // page modify
 func (this *PageController) Modify() {
-
 	if !this.IsPost() {
 		this.ViewError("请求方式有误！", "/space/index")
 	}
@@ -243,6 +253,7 @@ func (this *PageController) Modify() {
 	comment := strings.TrimSpace(this.GetString("comment", ""))
 	isNoticeUser := strings.TrimSpace(this.GetString("is_notice_user", "0"))
 	isFollowDoc := strings.TrimSpace(this.GetString("is_follow_doc", "0"))
+	innerFile := this.GetString("inner_file", "0")
 
 	// rm document_page_editor-markdown-doc
 	this.Ctx.Request.PostForm.Del("document_page_editor-markdown-doc")
@@ -257,10 +268,10 @@ func (this *PageController) Modify() {
 	if err != nil {
 		this.jsonError("文档名称格式不正确！")
 	}
-	if match {
+	if innerFile == "0" && match {
 		this.jsonError("文档名称格式不正确！")
 	}
-	if newName == utils.Document_Default_FileName {
+	if innerFile == "0" && newName == utils.Document_Default_FileName {
 		this.jsonError("文档名称不能为 " + utils.Document_Default_FileName + " ！")
 	}
 	//if comment == "" {
@@ -313,6 +324,24 @@ func (this *PageController) Modify() {
 		"name":         newName,
 		"edit_user_id": this.UserId,
 	}
+
+	// 【新增】仅用于压缩包内部文件修改逻辑
+	if innerFile == "1" {
+		c, err := ComCompress(this.Controller, false)
+		if err != nil || !c.exist {
+			this.jsonError("修改失败，该文件可能未被解压！")
+		}
+		pageFile := filepath.Join(c.serveRoot, newName)
+		err = models.DocumentModel.UpdateFile(pageFile, documentContent, updateValue)
+		if err != nil {
+			this.ErrorLog("修改文档 " + documentId + "," + newName + " 失败：" + err.Error())
+			this.jsonError("修改文档失败！")
+		}
+		this.InfoLog("修改文档 " + documentId + "," + newName + " 成功")
+		this.jsonSuccess("文档修改成功！", nil, "/document/index?document_id="+documentId)
+		return
+	}
+
 	_, err = models.DocumentModel.UpdateDBAndFile(documentId, spaceId, document, documentContent, updateValue, comment)
 	if err != nil {
 		this.ErrorLog("修改文档 " + documentId + " 失败：" + err.Error())
@@ -608,14 +637,23 @@ func (this *PageController) ViewCom() {
 
 // 压缩包内部文件预览，已提前解压
 func (this *PageController) ViewPkgCom() {
-
 	info, err := GetDocInfo(this.BaseController)
 	if err != nil {
 		this.ViewError(err.Error())
 	}
 	innerFile := this.GetString("innerFile", "")
-	_, filePath := GetInnerFilePath(info.pageFile, innerFile)
-	RequestFile(this, filePath, info)
+	_, fPath := GetInnerFilePath(info.pageFile, innerFile)
+
+	c, err := ComCompress(this.Controller, false)
+	if err != nil {
+		this.Abort(err.Error())
+	}
+	// 若有在线解压，则请求在线解压文件夹中的文件，否则请求单个解压的临时文件
+	if c.exist {
+		fPath = filepath.Join(c.serveRoot, innerFile)
+	}
+
+	RequestFile(this, fPath, info)
 
 	this.viewLayout("page/viewCom", "document_view")
 }
@@ -655,12 +693,17 @@ func GetHost(ctx *context.Context) string {
 	return host
 }
 
-func ComCompress(self *DataController, extract bool) (*Compressor, error) {
+// DataController PageController 的共同祖先类 beego.Controller
+func ComCompress(self beego.Controller, extract bool) (*Compressor, error) {
 	documentId := self.GetString("document_id", "")
-	pageFile := self.GetString("file", "")
 	document, err := models.DocumentModel.GetDocumentByDocumentId(documentId)
 	if err != nil || len(document) == 0 {
 		return nil, errors.New("文件空间查找错误！")
+	}
+	// pageFile := self.GetString("file", "")	// 最好还是不依赖于前端传输
+	_, pageFile, err := models.DocumentModel.GetParentDocumentsByDocument(document)
+	if err != nil {
+		return nil, err
 	}
 	c := CreateCompressor(pageFile)
 	err = c.InitCompress(document["space_id"], extract)
@@ -672,32 +715,35 @@ func ComCompress(self *DataController, extract bool) (*Compressor, error) {
 
 // 在线解压
 func (this *DataController) Decompress() {
-	if _, err := ComCompress(this, true); err != nil {
+	if _, err := ComCompress(this.Controller, true); err != nil {
 		this.Abort(err.Error())
 	}
 	this.ServeJSON()
 }
 
+// 为解决文本复制问题，在请求压缩包时提前请求一次服务地址，以pre区分
 // 获取在线解压后的服务地址
 func (this *DataController) GetServeUrl() {
 	pre := this.GetString("pre", "")
-	c, err := ComCompress(this, false)
+	c, err := ComCompress(this.Controller, false)
 	if err != nil {
 		this.Abort(err.Error())
 	}
+	// 在请求查看压缩包文件时，可以未经解压，但取服务地址时需检查异常
 	if !c.exist && pre == "" {
 		this.Abort("该文件未解压，请先执行在线解压操作！")
 	}
 
 	host := GetHost(this.Ctx)
 	url := strings.ReplaceAll(host+"/file/"+c.serveRoot, "\\", "/")
-	this.Data["json"] = url
+
+	this.Data["json"] = map[string]string{"url": url, "exist": strconv.FormatBool(c.exist)}
 	this.ServeJSON()
 }
 
 // 在线解压清除
 func (this *DataController) DelCompress() {
-	c, err := ComCompress(this, false)
+	c, err := ComCompress(this.Controller, false)
 	if err != nil {
 		this.Abort(err.Error())
 	}
@@ -718,29 +764,33 @@ func (this *DataController) ViewPkg() {
 	c := CreateCompressor(pageFile)
 	files, err := c.GetFileList(false)
 
-	if err == nil {
-		this.Data["json"] = files
+	if err != nil {
+		this.Abort(err.Error())
 	}
+	this.Data["json"] = files
 	this.ServeJSON()
 }
 
 // 提供压缩包内部文件内容预览功能
-// 默认解压到同目录下_temp文件夹下
+// 默认解压到同目录下_temp文件夹下，若该压缩包已被解压，则请求解压后的文件
 func (this *DataController) ViewPkgFile() {
-	pageFile := this.GetString("file", "")
+	c, err := ComCompress(this.Controller, false)
+	if err != nil {
+		this.Abort(err.Error())
+	}
 	innerFile := this.GetString("innerFile", "")
-	absPath := utils.Document.GetAbsPageFileByPageFile(pageFile)
-	_, filename := filepath.Split(pageFile)
+	pageFile, absPath := c.pageFile, c.path
 	iFile, _ := GetInnerFilePath(pageFile, innerFile)
 
 	// 暂不检验请求路径合法性
 	// fs := strings.Split(strings.ReplaceAll(innerFile, "\\", "/"), "/")
 	innerPath, name := filepath.Split(iFile)
-	dstPath := filepath.Join(filepath.Dir(absPath), "_temp", filename, innerPath)
+	dstPath := filepath.Join(filepath.Dir(absPath), "_temp", c.name, innerPath)
 	dstName := filepath.Join(dstPath, name)
-	// 文件已存在则不再重复解压
+
+	// 文件已存在或有在线解压则不再重复解压
 	flag, _ := utils.File.PathIsExists(dstName)
-	if flag {
+	if flag || c.exist {
 		this.ServeJSON()
 		return
 	}
@@ -756,13 +806,14 @@ func (this *DataController) ViewPkgFile() {
 		this.Abort("创建目标文件失败，请联系管理员！")
 	}
 
-	c := CreateCompressor(pageFile)
+	// c = CreateCompressor(pageFile)
 	err = c.ExtractInnerFile(absPath, innerFile, dst)
 	dst.Close()
 
-	if err == nil {
-		this.Data["json"] = dstName
+	if err != nil {
+		this.Abort(err.Error())
 	}
+	this.Data["json"] = dstName
 	this.ServeJSON()
 }
 

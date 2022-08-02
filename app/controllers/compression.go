@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
 	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
@@ -165,7 +166,7 @@ func (c *Compressor) GetFileList(extract bool) (FileList, error) {
 		files, err = c.GetZipFileList(absPath, extract)
 	} else if ext == ".tar" {
 		files, err = c.GetTarFileList(absPath, extract)
-	} else if ext == ".gz" {
+	} else if ext == ".gz" || ext == ".tgz" {
 		files, err = c.GetGZipFileList(absPath, extract)
 	}
 	return files, err
@@ -327,7 +328,7 @@ func (c *Compressor) ExtractInnerFile(absPath string, innerFile string, dst *os.
 		err = ExtractZipInnerFile(absPath, innerFile, dst)
 	} else if ext == ".tar" {
 		err = ExtractTarInnerFile(absPath, innerFile, dst)
-	} else if ext == ".gz" {
+	} else if ext == ".gz" || ext == ".tgz" {
 		err = ExtractGZipInnerFile(absPath, innerFile, dst)
 	}
 	return err
@@ -392,7 +393,7 @@ func ExtractGZipInnerFile(gzFile string, innerFile string, dst *os.File) error {
 		}
 		return nil
 	}
-
+	logs.Error(IsGZ(gzFile))
 	return _ExtractTarInnerFile(gr, nil, innerFile, dst)
 }
 

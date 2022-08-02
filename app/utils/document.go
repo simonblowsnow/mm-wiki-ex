@@ -91,7 +91,6 @@ func (d *document) OpenFile(filename string) *os.File {
 	return dst
 }
 
-
 // create document
 func (d *document) Create(pageFile string) error {
 	if pageFile == "" {

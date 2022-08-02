@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -391,6 +392,17 @@ func (d *Document) MoveDBAndFile(documentId string, spaceId string, updateValue 
 	return
 }
 
+// TODO：支持修改目录和文件名
+//【新增·用户压缩包解压后的文件修改】
+func (d *Document) UpdateFile(pageFile string, documentContent string, updateValue map[string]interface{}) error {
+	_, name := filepath.Split(pageFile)
+	err := utils.Document.Update(pageFile, name, documentContent, 3, false)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // update document by document_id
 func (d *Document) UpdateDBAndFile(documentId string, spaceId string, document map[string]string, documentContent string, updateValue map[string]interface{}, comment string) (id int64, err error) {
 
@@ -424,7 +436,7 @@ func (d *Document) UpdateDBAndFile(documentId string, spaceId string, document m
 		nameIsChange = true
 	}
 
-	// Excel文件的更新逻辑特别，采用文件上传方式
+	//【新增】Excel文件的更新逻辑特别，采用文件上传方式，不执行内容写入逻辑
 	flag := strings.ToLower(path.Ext(oldPageFile)) == ".xlsx"
 	if !flag {
 		err = utils.Document.Update(oldPageFile, updateValue["name"].(string), documentContent, docType, nameIsChange)

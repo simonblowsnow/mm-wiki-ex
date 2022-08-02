@@ -24,6 +24,7 @@
 	".rar":   "pkg",
 	".tg":    "pkg",
 	".7z":    "pkg",
+	".tgz":    "pkg",
 	".rar4":  "pkg",
 	".mp4":   "video",
 	".3gp":   "video",

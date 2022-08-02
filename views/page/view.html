@@ -107,15 +107,19 @@
 
                         <input type="hidden" id="fileWebUrl" value="">
                         <input type="hidden" id="fileWebStatus" value="0">
+                        <input type="hidden" id="innerFilePath" value="">
                         <div class="btn-group" role="group" aria-label="..." style="float: right">
                             <a type="button" id="decompression" class="btn btn-default" onclick="decompressFile()" title="在线解压后可生成在线服务地址">
                                 <i class="glyphicon glyphicon-folder-close"></i>&nbsp;在线解压
                             </a>
                             <a type="button" id="webUrl" data-clipboard-text="copy" class="btn btn-default" onclick="getServeUrl()"> 
-                                <i class="glyphicon glyphicon-paperclip"></i>&nbsp;服务地址
+                                <i class="glyphicon glyphicon-paperclip"></i>&nbsp;服务
                             </a>
                             <a type="button" id="clearPkg" class="btn btn-default"  onclick="DelCompress()">
                                 <i class="glyphicon glyphicon-floppy-remove"></i>&nbsp;清除
+                            </a>
+                            <a type="button" id="editFile" class="btn btn-default disabled" onclick="EditInnerFile()" title="选择压缩包内部文件，可在线编辑">
+                                <i class="glyphicon glyphicon-edit"></i>&nbsp;编辑
                             </a>
                         </div>
                     </div>
@@ -146,13 +150,8 @@
     
     function showUrl (url) {
         layer.open({
-            type: 1,
-            skin: Layers.skin,
-            title: '<strong>文件地址</strong>',
-            shadeClose: true,
-            shade : 0.6,
-            maxmin: true,
-            area: ["450px", "200px"],
+            type: 1, skin: Layers.skin, shadeClose: true, shade : 0.6, maxmin: true, 
+            title: '<strong>文件地址</strong>', area: ["450px", "200px"],
             content: "<div><div style='height: 40px; margin-top: 25px'>已复制到剪切板，您也可" + 
                 "<a target='_blank' href='"+ url + "'>直接点击访问</a>或" + 
                 '<a onclick="DownloadFile(' + "'" + url + "'" + ')">下载</a></div>' + 
@@ -239,7 +238,10 @@
         // 选中节点
         $('#fileView').on("activate_node.jstree", function (obj, e) {
             var fType = e.node.type;
-            if (fType != "file") return;
+            if (fType != "file") {
+                if (!$("#editFile").hasClass("disabled")) $("#editFile").addClass("disabled");
+                return
+            }
 
             var paths = [];
             var text = e.node.text;
@@ -250,13 +252,18 @@
             });
             paths.reverse();
             paths.push(text);
-            viewPkgFile(filePath, paths);   
+            var ifPath = paths.join("/");
+            var docId = $("#fileId").val();
+            
+            $("#innerFilePath").val(ifPath);
+            $("#editFile").removeClass("disabled");
+            viewPkgFile(filePath, docId, ifPath);   
         });
     }
 
     // 请求压缩包内的单个文件内容，先请求解压，再请求解压后的文件内容
-    function viewPkgFile(file, innerFilePath) {
-        var param = {'file': file, 'innerFile': innerFilePath.join("/")};
+    function viewPkgFile(file, docId, innerFilePath) {
+        var param = {'file': file, 'innerFile': innerFilePath, 'document_id': docId};
         ajaxData('/ViewPkgFile', param, function (data) {
             openPkgContent(param);
         });
@@ -287,10 +294,12 @@
         var param = {'file': filePath, 'document_id': fileId};
         ajaxData('/Decompress', param, function (data) {
             ShowMessage("解压成功！", 1);
+            $("#webUrl").removeClass("disabled");
         });
     }
 
     // 获取在线解压后形成的服务地址
+    // TODO：按钮状态设置==================================================================================
     function getServeUrl(pre) {
         var url = $("#fileWebUrl").val();
         var status = $("#fileWebStatus").val();
@@ -298,9 +307,10 @@
         var fileId = $("#fileId").val();
         var param = {'file': filePath, 'document_id': fileId, 'pre': pre || ''};
         ajaxData('/GetServeUrl', param, function (data) {
-            var url = data;
+            var url = data.url;
             $("#fileWebUrl").val(url);
             if (pre) {
+                if (data.exist == "false") $("#webUrl").addClass("disabled");
                 setCopy("#webUrl", url, function () { return url }, true);
             } else {
                 $("#fileWebStatus").val("1");
@@ -315,7 +325,18 @@
         var param = {'file': filePath, 'document_id': fileId};
         ajaxData('/DelCompress', param, function (data) {
             ShowMessage("清除成功，服务地址已失效！", 1);
+            $("#webUrl").addClass("disabled");
+            $("#editFile").addClass("disabled");
         });
+    }
+
+    function EditInnerFile () {
+        var fileId = $("#fileId").val();
+        var innerFile = $("#innerFilePath").val();
+        if (innerFile == "") return ShowMessage("未选择压缩包内可编辑文件", 0);
+        var url = "/page/edit?document_id=" + fileId + "&innerFile=" + innerFile;
+        window.location.href = url;
+        //alert("保存成功，请注意：该结果仅存储在云端，不会写入压缩包，若点击清除，则所有改动将被清空！");
     }
 
     function ajaxData(url, param, callbackSuc, callbackErr) {

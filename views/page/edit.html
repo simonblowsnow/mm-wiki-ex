@@ -3,9 +3,11 @@
     <div class="row">{{$pageContent := .page_content}}{{$document := .document}}
         <div class="col-md-12">
             <input type="hidden" name="document_id" value="{{$document.document_id}}">
+            <input type="hidden" name="inner_file" value="{{.inner_file}}">
             <div class="row">
                 <div class="col-md-10">
-                    <input type="text" name="name" class="form-control" placeholder="请输入文档名称" value="{{$document.name}}" {{if eq $document.parent_id "0"}} readonly="readonly" {{end}}>
+                    <input type="text" name="name" class="form-control" placeholder="请输入文档名称" value="{{$document.name}}" 
+                    {{if or (eq .inner_file "1") (eq $document.parent_id "0")}} readonly="readonly" {{end}}>
                 </div>
                 <div class="col-md-2 text-center" >
                     <button type="button" class="btn btn-primary" onclick="Page.ajaxSave(this.form, {{.sendEmail}}, {{.autoFollowDoc}})"><i class="fa fa-save"></i> 保存</button>
