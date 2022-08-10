@@ -670,6 +670,7 @@ mark {
 .ztree li span.button.f_html_ico_docu{margin-right:2px; background: url(../images/files/html.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
 .ztree li span.button.f_app_ico_docu{margin-right:2px; background: url(../images/files/application.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
 .ztree li span.button.f_db_ico_docu{margin-right:2px; background: url(../images/files/db.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
+.ztree li span.button.f_git_ico_docu{margin-right:2px; background: url(../images/files/github.png) no-repeat scroll 0 0 transparent; vertical-align:top; *vertical-align:middle}
 
 .showMessage {
     padding: 10px 20px;
@@ -692,4 +693,14 @@ mark {
     background-color: #fef0f0;
     border: 1px solid #fde2e2;
     color: #F76C6C;
+}
+
+.p-top7 {
+    padding-top: 7px !important;
+}
+.m-tb0 {
+    margin-left: 0px !important; margin-right: 0px !important;
+}
+.m-l7 {
+    margin-left: 5px !important;
 }

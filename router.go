@@ -28,6 +28,7 @@ func initRouter() {
 	beego.Router("/GetServeUrl", &controllers.DataController{}, "*:GetServeUrl")
 	beego.Router("/DelCompress", &controllers.DataController{}, "*:DelCompress")
 	beego.Router("/ViewPkgFile", &controllers.DataController{}, "*:ViewPkgFile")
+	beego.Router("/CloneCloud", &controllers.BaseController{}, "*:CloneCloud")
 
 	beego.AutoRouter(&controllers.AuthorController{})
 	beego.AutoRouter(&controllers.MainController{})

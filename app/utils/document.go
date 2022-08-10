@@ -20,6 +20,7 @@ const (
 	Document_Type_Page = 1
 	Document_Type_Dir  = 2
 	Document_Type_File = 3
+	Document_Type_Git  = 4
 )
 
 func NewDocument(documentAbsDir string, markdownAbsDir string) *document {
@@ -40,7 +41,7 @@ type document struct {
 func (d *document) GetPageFileByParentPath(name string, docType int, parentPath string) (pageFile string) {
 	if docType == Document_Type_Page {
 		pageFile = fmt.Sprintf("%s/%s%s", parentPath, name, Document_Page_Suffix)
-	} else if docType == Document_Type_Dir {
+	} else if docType == Document_Type_Dir || docType == Document_Type_Git {
 		pageFile = fmt.Sprintf("%s/%s/%s%s", parentPath, name, Document_Default_FileName, Document_Page_Suffix)
 	} else {
 		pageFile = fmt.Sprintf("%s/%s", parentPath, name)
@@ -157,10 +158,10 @@ func (d *document) Update(oldPageFile string, name string, content string, docTy
 	}
 	if nameIsChange {
 		filePath := filepath.Dir(absOldPageFile)
-		if docType == Document_Type_Dir {
+		if docType == Document_Type_Dir || docType == Document_Type_Git {
 			err = os.Rename(filePath, filepath.Dir(filePath)+"/"+name)
 		} else {
-			err = os.Rename(absOldPageFile, filePath+"/"+name+Document_Page_Suffix)
+			err = os.Rename(absOldPageFile, filePath+"/"+name) // +Document_Page_Suffix
 		}
 		if err != nil {
 			return
@@ -193,7 +194,7 @@ func (d *document) Delete(path string, docType int) error {
 	if !ok {
 		return nil
 	}
-	if docType == Document_Type_Dir {
+	if docType == Document_Type_Dir || docType == Document_Type_Git {
 		return os.RemoveAll(filepath.Dir(absPageFile))
 	}
 	return os.Remove(absPageFile)
@@ -217,7 +218,11 @@ func (d *document) Move(movePath string, targetPath string, docType int) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	absOldPageFile := d.GetAbsPageFileByPageFile(movePath)
+	// 云转储时迁移文件目录不在本系统体系
+	absOldPageFile := movePath
+	if docType != Document_Type_Git {
+		absOldPageFile = d.GetAbsPageFileByPageFile(movePath)
+	}
 	absTargetPageFile := d.GetAbsPageFileByPageFile(targetPath)
 
 	if docType == Document_Type_Dir {

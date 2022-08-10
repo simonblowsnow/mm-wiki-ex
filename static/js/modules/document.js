@@ -219,7 +219,6 @@ var Document = {
             // bind add
             var addBtn = $("#addBtn_" + treeNode.tId);
 
-            
             var sz = Document.GetFrameSize();
             if (addBtn) addBtn.bind("click", function () {
                 var content = "/document/add?space_id=" + treeNode.spaceId + "&parent_id=" + treeNode.id;

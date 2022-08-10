@@ -20,6 +20,7 @@ const (
 	Document_Type_Page = 1
 	Document_Type_Dir  = 2
 	Document_Type_File = 3
+	Document_Type_Git  = 4
 )
 
 const Table_Document_Name = "document"
@@ -220,7 +221,6 @@ func (d *Document) DeleteDBAndFile(documentId string, spaceId string, userId str
 
 // insert document
 func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err error) {
-
 	db := G.DB()
 	// start db begin
 	tx, err := db.Begin(db.Config)
@@ -232,6 +232,8 @@ func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err e
 	parentId := documentValue["parent_id"].(string)
 	spaceId := documentValue["space_id"].(string)
 	tp := documentValue["type"].(int)
+	cf := documentValue["isCreateFile"]
+	delete(documentValue, "isCreateFile")
 
 	sequence, err := d.GetDocumentMaxSequence(parentId, spaceId)
 	if err != nil {
@@ -245,7 +247,6 @@ func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err e
 	documentValue["create_time"] = time.Now().Unix()
 	documentValue["update_time"] = time.Now().Unix()
 	rs, err = db.ExecTx(db.AR().Insert(Table_Document_Name, documentValue), tx)
-
 	if err != nil {
 		tx.Rollback()
 		return
@@ -253,7 +254,7 @@ func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err e
 	id = rs.LastInsertId
 
 	// 【修改·上传文件无需新建md】
-	if tp != Document_Type_File {
+	if tp != Document_Type_File || cf == true {
 		// create document page file
 		document := map[string]string{
 			"space_id":  documentValue["space_id"].(string),

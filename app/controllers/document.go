@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/simonblowsnow/mm-wiki-ex/app/services"
@@ -162,8 +164,14 @@ func (this *DocumentController) Save() {
 	if name == utils.Document_Default_FileName {
 		this.jsonError("文档名称不能为 " + utils.Document_Default_FileName + " ！")
 	}
-	if docType != models.Document_Type_Page &&
-		docType != models.Document_Type_Dir {
+
+	// 在线创建非md文件，需要在线创建新文件
+	isCreateFile := docType == models.Document_Type_Page
+	if docType == models.Document_Type_Page && strings.Contains(name, ".") {
+		docType = models.Document_Type_File
+	}
+
+	if docType < 1 || docType > 4 {
 		this.jsonError("文档类型错误！")
 	}
 
@@ -212,6 +220,7 @@ func (this *DocumentController) Save() {
 		"path":           parentDocument["path"] + "," + parentId,
 		"create_user_id": this.UserId,
 		"edit_user_id":   this.UserId,
+		"isCreateFile":   isCreateFile,
 	}
 	documentId, err := models.DocumentModel.Insert(insertDocument)
 	if err != nil {
@@ -444,7 +453,9 @@ func (this *DocumentController) Delete() {
 	if len(document) == 0 {
 		this.jsonError("文档不存在！")
 	}
-	if document["type"] == fmt.Sprintf("%d", models.Document_Type_Dir) {
+	docType, _ := strconv.Atoi(document["type"])
+
+	if docType == models.Document_Type_Dir {
 		childDocs, err := models.DocumentModel.GetDocumentsByParentId(document["document_id"])
 		if err != nil {
 			this.ErrorLog("删除文档失败：" + err.Error())
@@ -482,12 +493,17 @@ func (this *DocumentController) Delete() {
 	}
 	// 如果是压缩包，则删除临时缓存
 	tp := utils.GetFileType(pageFile)
-	if document["type"] == "3" && tp == "pkg" {
+	if docType == models.Document_Type_File && tp == "pkg" {
 		tempPath := utils.GetTempFilePath(pageFile)
 		flag, _ := utils.File.PathIsExists(tempPath)
 		if flag {
 			os.RemoveAll(tempPath)
 		}
+	}
+	// 如果是转储仓库，则同步删除资源
+	if docType == models.Document_Type_Git {
+		tempPath := utils.GetRepoAbsPath(pageFile)
+		os.RemoveAll(tempPath)
 	}
 
 	// delete attachment
@@ -512,37 +528,9 @@ func (this *DocumentController) Upload() {
 	if !this.IsPost() {
 		this.ViewError("请求方式有误！", "/main/index")
 	}
-	spaceId := strings.TrimSpace(this.GetString("space_id", "0"))
-	parentId := strings.TrimSpace(this.GetString("parent_id", "0"))
-
-	if spaceId == "0" || parentId == "0" {
-		this.jsonError("没有选择空间或父文档！")
-	}
-	space, err := models.SpaceModel.GetSpaceBySpaceId(spaceId)
+	info, err := GetDirInfo(&this.BaseController)
 	if err != nil {
-		this.ErrorLog("创建保存文档失败：" + err.Error())
-		this.jsonError("创建文档失败！")
-	}
-	if len(space) == 0 {
-		this.jsonError("空间不存在！")
-	}
-
-	// check space document privilege
-	_, isEditor, _ := this.GetDocumentPrivilege(space)
-	if !isEditor {
-		this.jsonError("您没有权限在该空间下创建文档！")
-	}
-	d := models.DocumentModel
-	parentDocument, err := d.GetDocumentByDocumentId(parentId)
-	if err != nil {
-		this.ErrorLog("创建保存文档失败：" + err.Error())
-		this.jsonError("创建文档失败！")
-	}
-	if len(parentDocument) == 0 {
-		this.jsonError("父文档不存在！")
-	}
-	if parentDocument["type"] != fmt.Sprintf("%d", models.Document_Type_Dir) {
-		this.jsonError("父文档不是目录！")
+		this.ViewError(err.Error())
 	}
 
 	f, h, err := this.GetFile("file1")
@@ -553,7 +541,7 @@ func (this *DocumentController) Upload() {
 	filename := h.Filename
 
 	// check document name "Readme"
-	document, err := d.GetDocumentByNameParentIdAndSpaceId(filename, parentId, spaceId, 3)
+	document, err := models.DocumentModel.GetDocumentByNameParentIdAndSpaceId(filename, info.parentId, info.spaceId, 3)
 	if err != nil {
 		this.ErrorLog("创建保存文档" + filename + "失败：" + err.Error())
 		this.jsonError("创建文档失败！")
@@ -564,10 +552,10 @@ func (this *DocumentController) Upload() {
 
 	// 获取文件目录绝对路径
 	doc := map[string]string{
-		"parent_id": parentId, "space_id": spaceId, "name": "", "type": "1",
-		"path": parentDocument["path"] + "," + parentId,
+		"parent_id": info.parentId, "space_id": info.spaceId, "name": "", "type": "1",
+		"path": info.document["path"] + "," + info.parentId,
 	}
-	_, pageFile, _ := d.GetParentDocumentsByDocument(doc)
+	_, pageFile, _ := models.DocumentModel.GetParentDocumentsByDocument(doc)
 	absFilePath := utils.Document.GetAbsPageFileByPageFile(pageFile)
 	folder, _ := filepath.Split(absFilePath)
 
@@ -576,11 +564,11 @@ func (this *DocumentController) Upload() {
 
 	// 入库
 	insertDocument := map[string]interface{}{
-		"parent_id":      parentId,
-		"space_id":       spaceId,
+		"parent_id":      info.parentId,
+		"space_id":       info.spaceId,
 		"name":           filename,
 		"type":           models.Document_Type_File,
-		"path":           parentDocument["path"] + "," + parentId,
+		"path":           info.document["path"] + "," + info.parentId,
 		"create_user_id": this.UserId,
 		"edit_user_id":   this.UserId,
 	}
@@ -625,4 +613,43 @@ func (this *DocumentController) UpdateFile() {
 
 	this.InfoLog("修改文档 " + info.documentId + " 成功")
 	this.jsonSuccess("修改文档成功")
+}
+
+func GetDirInfo(this *BaseController) (DocInfo, error) {
+	res := DocInfo{}
+	spaceId := strings.TrimSpace(this.GetString("space_id", "0"))
+	parentId := strings.TrimSpace(this.GetString("parent_id", "0"))
+
+	if spaceId == "0" || parentId == "0" {
+		return res, errors.New("没有选择空间或父文档！")
+	}
+	space, err := models.SpaceModel.GetSpaceBySpaceId(spaceId)
+	if err != nil {
+		this.ErrorLog("创建保存文档失败：" + err.Error())
+		return res, err
+	}
+	if len(space) == 0 {
+		return res, errors.New("空间不存在！")
+	}
+
+	// check space document privilege
+	_, isEditor, _ := this.GetDocumentPrivilege(space)
+	if !isEditor {
+		return res, errors.New("您没有权限在该空间下创建文档！")
+	}
+	d := models.DocumentModel
+	parentDocument, err := d.GetDocumentByDocumentId(parentId)
+	if err != nil {
+		this.ErrorLog("创建保存文档失败：" + err.Error())
+		return res, err
+	}
+	if len(parentDocument) == 0 {
+		return res, errors.New("父文档不存在！")
+	}
+	if parentDocument["type"] != fmt.Sprintf("%d", models.Document_Type_Dir) {
+		return res, errors.New("父文档不是目录！")
+	}
+	res.spaceId, res.parentId, res.document = spaceId, parentId, parentDocument
+
+	return res, nil
 }

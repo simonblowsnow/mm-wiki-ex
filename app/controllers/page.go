@@ -36,6 +36,7 @@ type DocInfo struct {
 	pageFile   string
 	isEditor   bool
 	spaceId    string
+	parentId   string
 	document   map[string]string
 }
 
@@ -88,14 +89,19 @@ func (this *PageController) View() {
 	ext := strings.ToLower(path.Ext(pageFile))
 	fileExt, flag := FILETYPES[ext]
 	documentContent := "该类型文件不支持预览！"
-
 	absPath := utils.Document.GetAbsPageFileByPageFile(pageFile)
 	fileInfo, err := os.Stat(absPath)
+	if err != nil {
+		this.ViewError("目录文档不存在！")
+		return
+	}
+
 	// 未识别的文件，大小超过限制则不读取其内容，大约6M
 	// TODO：文件读取上限大小使用配置文件参数
 	if !flag && err == nil && fileInfo.Size() > 7000000 {
 		flag = true
 	}
+
 	// 仅未识别的文件或md格式文件，读取其内容，md大于10M也不再读
 	if (!flag || ext == ".md") && fileInfo.Size() < 12000000 {
 		fileExt = ext
@@ -112,7 +118,6 @@ func (this *PageController) View() {
 	if fileExt == "other" {
 		isEditor = false
 	}
-
 	// get edit user and create user
 	users, err := models.UserModel.GetUsersByUserIds([]string{document["create_user_id"], document["edit_user_id"]})
 	if err != nil {
@@ -148,10 +153,9 @@ func (this *PageController) View() {
 	// 拼接文件网络地址
 	href := this.Ctx.Request.Referer()
 	u, _ := url.Parse(href)
-	host := "http://" + u.Host
-	if href[:5] == "https" {
-		host = "https://" + u.Host
-	}
+	host := If(href[:5] == "https", "https://"+u.Host, "http://"+u.Host)
+
+	this.Data["location"] = "view"
 	this.Data["is_editor"] = isEditor
 	this.Data["space"] = space
 	this.Data["create_user"] = createUser
@@ -164,7 +168,7 @@ func (this *PageController) View() {
 	this.Data["file_path"] = pageFile
 	this.Data["file_suffix"] = ext
 	this.Data["file_ext"] = fileExt
-	this.Data["file_url"] = host + "/file/" + pageFile
+	this.Data["file_url"] = host.(string) + "/file/" + pageFile
 	this.Data["document_id"] = documentId
 
 	this.viewLayout("page/view", "document_page")
@@ -210,6 +214,7 @@ func (this *PageController) Edit() {
 		this.ViewError("查找父文档失败！")
 	}
 
+	docType, _ := strconv.Atoi(document["type"])
 	// 增加编辑压缩包内解压的文件功能
 	this.Data["inner_file"] = "0"
 	if innerFile != "" {
@@ -217,10 +222,12 @@ func (this *PageController) Edit() {
 		if err != nil {
 			this.Abort(err.Error())
 		}
-		if !c.exist {
+
+		isGit := docType == models.Document_Type_Git
+		if !c.exist && !isGit {
 			this.ViewError("该文件未解压，请先执行在线解压操作！")
 		}
-		pageFile = filepath.Join(c.serveRoot, innerFile)
+		pageFile = filepath.Join(If(isGit, utils.GetRepoPageDir(c.pageFile), c.serveRoot).(string), innerFile)
 		document["name"] = innerFile
 		this.Data["inner_file"] = "1"
 	}
@@ -231,14 +238,16 @@ func (this *PageController) Edit() {
 		this.ErrorLog("查找文档 " + documentId + " 失败：" + err.Error())
 		this.ViewError("文档不存在！")
 	}
+	ext := strings.ToLower(path.Ext(pageFile))
 
 	autoFollowDoc := models.ConfigModel.GetConfigValueByKey(models.ConfigKeyAutoFollowdoc, "0")
 	sendEmail := models.ConfigModel.GetConfigValueByKey(models.ConfigKeySendEmail, "0")
-
 	this.Data["sendEmail"] = sendEmail
 	this.Data["autoFollowDoc"] = autoFollowDoc
 	this.Data["page_content"] = documentContent
 	this.Data["document"] = document
+	this.Data["location"] = "edit"
+	this.Data["file_suffix"] = ext
 	this.viewLayout("page/edit", "document_page")
 }
 
@@ -265,10 +274,7 @@ func (this *PageController) Modify() {
 		this.jsonError("文档名称不能为空！")
 	}
 	match, err := regexp.MatchString(`[\\\\/:*?\"<>、|]`, newName)
-	if err != nil {
-		this.jsonError("文档名称格式不正确！")
-	}
-	if innerFile == "0" && match {
+	if err != nil || (innerFile == "0" && match) {
 		this.jsonError("文档名称格式不正确！")
 	}
 	if innerFile == "0" && newName == utils.Document_Default_FileName {
@@ -327,11 +333,14 @@ func (this *PageController) Modify() {
 
 	// 【新增】仅用于压缩包内部文件修改逻辑
 	if innerFile == "1" {
+		docType, _ := strconv.Atoi(document["type"])
+		isGit := docType == models.Document_Type_Git
 		c, err := ComCompress(this.Controller, false)
-		if err != nil || !c.exist {
+		if err != nil || (!c.exist && !isGit) {
 			this.jsonError("修改失败，该文件可能未被解压！")
 		}
-		pageFile := filepath.Join(c.serveRoot, newName)
+
+		pageFile := filepath.Join(If(isGit, utils.GetRepoPageDir(c.pageFile), c.serveRoot).(string), newName)
 		err = models.DocumentModel.UpdateFile(pageFile, documentContent, updateValue)
 		if err != nil {
 			this.ErrorLog("修改文档 " + documentId + "," + newName + " 失败：" + err.Error())
@@ -627,6 +636,7 @@ func sendEmail(documentId string, username string, comment string, url string) e
 // document page view common, 因去掉了繁琐的验证，可能被用于非法访问
 func (this *PageController) ViewCom() {
 	info, err := GetDocInfo(this.BaseController)
+
 	if err != nil {
 		this.ViewError(err.Error())
 	}
@@ -651,6 +661,9 @@ func (this *PageController) ViewPkgCom() {
 	// 若有在线解压，则请求在线解压文件夹中的文件，否则请求单个解压的临时文件
 	if c.exist {
 		fPath = filepath.Join(c.serveRoot, innerFile)
+	}
+	if c.docType == models.Document_Type_Git {
+		fPath = filepath.Join(utils.GetRepoPageDir(c.pageFile), innerFile)
 	}
 
 	RequestFile(this, fPath, info)
@@ -679,6 +692,7 @@ func RequestFile(self *PageController, pageFile string, info DocInfo) {
 	self.Data["file_type"] = document["type"]
 	self.Data["file_path"] = pageFile
 	self.Data["file_ext"] = fileExt
+	self.Data["file_suffix"] = ext
 	self.Data["file_url"] = host + "/file/" + pageFile
 	self.Data["page_content"] = documentContent
 }
@@ -705,7 +719,13 @@ func ComCompress(self beego.Controller, extract bool) (*Compressor, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	c := CreateCompressor(pageFile)
+	// Git转储仓储目录无需解压
+	c.docType, _ = strconv.Atoi(document["type"])
+	if c.docType == models.Document_Type_Git {
+		extract = false
+	}
 	err = c.InitCompress(document["space_id"], extract)
 	if extract && err == nil {
 		_, err = c.GetFileList(true)
@@ -729,15 +749,20 @@ func (this *DataController) GetServeUrl() {
 	if err != nil {
 		this.Abort(err.Error())
 	}
+	isGit := c.docType == models.Document_Type_Git
+	exist, pageFile := strconv.FormatBool(c.exist), c.serveRoot
+
 	// 在请求查看压缩包文件时，可以未经解压，但取服务地址时需检查异常
-	if !c.exist && pre == "" {
+	if !c.exist && pre == "" && !isGit {
 		this.Abort("该文件未解压，请先执行在线解压操作！")
 	}
-
+	if isGit {
+		exist, pageFile = "true", utils.GetRepoPageDir(c.pageFile)
+	}
 	host := GetHost(this.Ctx)
-	url := strings.ReplaceAll(host+"/file/"+c.serveRoot, "\\", "/")
+	url := strings.ReplaceAll(host+"/file/"+pageFile, "\\", "/")
 
-	this.Data["json"] = map[string]string{"url": url, "exist": strconv.FormatBool(c.exist)}
+	this.Data["json"] = map[string]string{"url": url + "/", "exist": exist}
 	this.ServeJSON()
 }
 
@@ -758,11 +783,32 @@ func (this *DataController) DelCompress() {
 	this.ServeJSON()
 }
 
+func GetLocalFileList(folder string) (FileList, error) {
+	idx := len(folder)
+	fs := FileList{}
+	err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+		if path != folder {
+			fs.setValueD(info, path[idx+1:])
+		}
+		return nil
+	})
+	return fs, err
+}
+
 // 提供压缩包文件预览功能	DataController PageController
 func (this *DataController) ViewPkg() {
 	pageFile := this.GetString("filePath", "")
+	docType, _ := this.GetInt("docType")
 	c := CreateCompressor(pageFile)
-	files, err := c.GetFileList(false)
+
+	var files FileList
+	var err error
+	if docType == models.Document_Type_Git {
+		pageFile = utils.GetRepoAbsPath(pageFile)
+		files, err = GetLocalFileList(pageFile)
+	} else {
+		files, err = c.GetFileList(false)
+	}
 
 	if err != nil {
 		this.Abort(err.Error())
@@ -787,14 +833,19 @@ func (this *DataController) ViewPkgFile() {
 	innerPath, name := filepath.Split(iFile)
 	dstPath := filepath.Join(filepath.Dir(absPath), "_temp", c.name, innerPath)
 	dstName := filepath.Join(dstPath, name)
+	isGit := c.docType == models.Document_Type_Git
+	if isGit {
+		repoPath := utils.GetRepoAbsPath(pageFile)
+		this.Data["json"] = filepath.Join(repoPath, innerFile)
+	}
 
 	// 文件已存在或有在线解压则不再重复解压
 	flag, _ := utils.File.PathIsExists(dstName)
-	if flag || c.exist {
+	if flag || c.exist || isGit {
 		this.ServeJSON()
 		return
 	}
-	ok, err := utils.File.PathIsExists(dstPath)
+	ok, _ := utils.File.PathIsExists(dstPath)
 	if !ok {
 		err := utils.Document.CreateFolder(dstPath)
 		if err != nil {
@@ -815,6 +866,99 @@ func (this *DataController) ViewPkgFile() {
 	}
 	this.Data["json"] = dstName
 	this.ServeJSON()
+}
+
+// 将已下载好的云资源，迁移到相应位置并入库
+func (this *BaseController) CloneCloud() {
+	info, err := GetDirInfo(this)
+	if err != nil {
+		this.jsonError(err.Error())
+	}
+
+	url := this.GetString("url", "")
+	folder := this.GetString("folder", "")
+	filename := this.GetString("name", "")
+
+	isFile, err := this.GetInt("isFile", -1)
+	if isFile == -1 || err != nil {
+		this.jsonError("参数有误！")
+	}
+	if isFile == 1 && filename == "" {
+		this.jsonError("文件名不能为空！")
+	}
+	root := beego.AppConfig.String("document::root_file")
+	if root == "" {
+		this.jsonError("云存储路径未配置，请联系管理员！")
+	}
+
+	baseName := path.Base(url)
+	ext := path.Ext(baseName)
+	if isFile == 0 {
+		if ext != ".git" {
+			this.jsonError("这似乎不是一个规范的Git仓库地址！")
+		}
+		filename = baseName[:len(baseName)-4]
+	} else {
+		folder += ".tmp"
+	}
+
+	match, err := regexp.MatchString(`[\\\\/:*?\"<>、&=|]`, filename)
+	if err != nil || filename == "" || match {
+		this.jsonError("文档名称格式不正确，名称不能含有特殊字符！")
+	}
+
+	// 新文件或目录的路径
+	doc := map[string]string{
+		"parent_id": info.parentId, "space_id": info.spaceId, "name": "", "type": "4",
+		"path": info.document["path"] + "," + info.parentId,
+	}
+	_, pageFile, _ := models.DocumentModel.GetParentDocumentsByDocument(doc)
+	fd, _ := filepath.Split(pageFile)
+	newPageFile := filepath.Join(fd, filename)
+	absPath := utils.Document.GetAbsPageFileByPageFile(newPageFile)
+	if flag, _ := utils.File.PathIsExists(absPath); flag {
+		this.jsonError("目标文件已存在，请检查！")
+	}
+
+	// 对于仓库类资源，不在原文件体系内转储，置于统一目录下管理，需同时检查是否存在文件体系及服务体系
+	if isFile == 0 {
+		newPageFile, _ = utils.GetRepoPageFile(newPageFile, true)
+		absPath = utils.Document.GetAbsPageFileByPageFile(newPageFile)
+		if flag, _ := utils.File.PathIsExists(absPath); flag {
+			this.jsonError("目标资源已存在，请检查，或删除后重试！")
+		}
+	}
+
+	resPath := filepath.Join(root, folder)
+	flag, err := utils.File.PathIsExists(resPath)
+	if !flag || err != nil {
+		this.jsonError("云资源未就绪，或内部存储地址有误！")
+	}
+
+	// 移动
+	err = utils.Document.Move(resPath, newPageFile, models.Document_Type_Git)
+	if err != nil {
+		this.jsonError(err.Error())
+	}
+
+	// 入库
+	docType := If(isFile == 0, models.Document_Type_Git, models.Document_Type_File).(int)
+	insertDocument := map[string]interface{}{
+		"parent_id":      info.parentId,
+		"space_id":       info.spaceId,
+		"name":           filename,
+		"type":           docType,
+		"path":           info.document["path"] + "," + info.parentId,
+		"create_user_id": this.UserId,
+		"edit_user_id":   this.UserId,
+	}
+	documentId, err := models.DocumentModel.Insert(insertDocument)
+	if err != nil {
+		this.ErrorLog("云转储操作失败：" + err.Error())
+		this.jsonError("操作失败")
+	}
+	this.InfoLog("云转储文档 " + utils.Convert.IntToString(documentId, 10) + " 成功")
+	this.jsonSuccess("转储文档成功", nil, "/document/index?document_id="+utils.Convert.IntToString(documentId, 10))
 }
 
 // 通用过程

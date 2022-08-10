@@ -20,11 +20,11 @@
         <div id="tabPanelNew" class="panel-body" style="padding: 30px 15px;">
             <br>{{$parentDocuments := .parent_documents}}{{$spaceId := .space_id}}{{$parentId := .parent_id}}
             <form class="form-horizontal" method="post" action="/document/save" onsubmit="return false">
-                <input type="hidden" name="parent_id" value="{{$parentId}}">
-                <input type="hidden" name="space_id" value="{{$spaceId}}">
+                <input type="hidden" name="parent_id" id="parentId" value="{{$parentId}}">
+                <input type="hidden" name="space_id" id="spaceId" value="{{$spaceId}}">
                 <div class="form-group" style="margin-bottom: 35px">
-                    <label class="col-sm-2 control-label"><span class="text-danger"> * </span> 父文档</label>
-                    <div class="col-sm-6 form-comment">
+                    <label class="col-sm-2 col-xs-3 control-label p-top7"><span class="text-danger"> * </span> 父文档</label>
+                    <div class="col-sm-6 col-xs-8 form-comment">
                         <span class="control-label">
                             {{range $parentDocument := $parentDocuments}}
                                 {{if eq $parentDocument.parent_id "0"}}
@@ -37,8 +37,8 @@
                     </div>
                 </div>
                 <div class="form-group" style="margin-bottom: 35px">
-                    <label class="col-sm-2 control-label"><span class="text-danger"> * </span>类型</label>
-                    <div class="col-sm-5">
+                    <label class="col-sm-2 col-xs-3 control-label p-top7"><span class="text-danger"> * </span>类型</label>
+                    <div class="col-sm-8 col-xs-8">
                         <div class="radio radio-inline radio-primary">
                             <input type="radio" name="type" id="radio-menu" value="1" checked="checked">
                             <label for="radio-menu"><i class="fa fa-file fa-fw"></i>页面</label>
@@ -50,8 +50,8 @@
                     </div>
                 </div>
                 <div class="form-group" style="margin-bottom: 35px">
-                    <label class="col-sm-2 control-label"><span class="text-danger"> * </span> 名称</label>
-                    <div class="col-sm-5">
+                    <label class="col-sm-2 col-xs-3 control-label p-top7"><span class="text-danger"> * </span> 名称</label>
+                    <div class="col-sm-5 col-xs-9">
                         <input type="text" name="name" class="form-control" placeholder="请输入文档名称" value="">
                     </div>
                     <div class="col-sm-4 form-comment">
@@ -83,10 +83,40 @@
         <!-- 上传文件界面 -->
         <div id="tabPanelFork" class="panel-body" style="display: none; ">
             <form enctype="multipart/form-data" class="form-horizontal" method="post" action="">
-                <div style="min-height: 200px;">
-                    <div class="form-group">
-                        <div class="file-loading">
-                            该功能暂未开放
+                <div style="min-height: 200px; ">
+                    <div class="form-group" id="group1">
+                        <div class="form-check">
+                            <input class="form-check-input m-l7" type="radio" name="exampleRadios" id="exampleRadios1" value="option1" checked>
+                            <label class="form-check-label" for="exampleRadios1" style="padding: 0px 200px 5px 5px">网络文件</label>
+                            
+                            <div class="form-group row m-tb0" style="margin-bottom: 15px">
+                                <label class="col-xs-2 control-label p-top7" style="font-weight: 400;"><span class="text-danger"> * </span> 地址</label>
+                                <div class="col-xs-10">
+                                    <input type="text" id="fileUrl" onchange="Form.changeUrl(this.value)" class="form-control" placeholder="http://www.host.com/file.zip" value="">
+                                </div>
+                            </div>
+                            <div class="form-group row m-tb0" style="margin-bottom: 15px">
+                                <label class="col-xs-2 control-label p-top7" style="font-weight: 400;"><span class="text-danger"> * </span> 名称</label>
+                                <div class="col-xs-10">
+                                    <input type="text" id="fileName" class="form-control" placeholder="文件重命名" value="">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input m-l7" type="radio" name="exampleRadios" id="exampleRadios2" value="option2">
+                            <label class="form-check-label" for="exampleRadios2" style="padding: 0px 200px 5px 5px">Git仓库</label>
+
+                            <div class="form-group row m-tb0" style="margin-bottom: 15px; ">
+                                <label class="col-xs-2 control-label p-top7" style="font-weight: 400;"><span class="text-danger"> * </span> 地址</label>
+                                <div class="col-xs-10">
+                                    <input type="text" id="gitUrl" class="form-control" placeholder="http://www.gitee.com/user/repo.git" value="">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" id="btnSubmit" class="btn btn-primary" style="margin: 8px 0px 8px 30px;" onclick="Form.submitClone()">提交</button>
+                        <div class="alert alert-info" role="alert" id="progress" style="text-align: end;">
+                            No Message.
                         </div>
                     </div>
                 </div>

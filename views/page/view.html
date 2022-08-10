@@ -38,12 +38,11 @@
                             <a onclick="Page.attachment({{$document.document_id}})">&nbsp<i class="fa fa-paperclip item"></i> 查看附件</a>
                         </p>
                     </div>
-
+                    
                     <!-- 格式判定 -->
-                    {{$comType := 0}}
-                    {{if eq .file_ext "image" "pdf" "word" "excel" "ppt" "video" "code"}}{{$comType = 1}}{{end}}
-                    {{if eq .file_suffix ".md" ".MD"}}{{$comType = 0}}{{end}}
-
+                    {{$comType := 1}}
+                    {{if or (eq .file_ext ".md" ".MD" "pkg") (eq .file_type "4")}}{{$comType = 0}}{{end}}
+                    
                     <div class="col-md-4 text-right">
                         <div class="btn-group" role="group" aria-label="...">
                             <!-- 文件地址及类型 -->
@@ -84,20 +83,18 @@
             </div>
 
             <div class="panel-body md-view-box page-view-content PadH" >
-                {{if eq $comType 0 }}
-                    {{if ne .file_ext "pkg"}}
+                {{if and (eq $comType 0) (ne .file_ext "pkg") (ne .file_type "4")}}
                     <div class="dir-preview-box">
                         <div class="dir-preview-btn">
                             展开目录
                         </div>
                         <div class="page-view-dir-toc" id="page-view-dir-toc"></div>
                     </div>
-                    {{end}}
                 {{end}}
 
                 {{if eq $comType 1}}
                     <iframe frameborder="0" scrolling="auto" frameborder="0" src="/page/viewCom?document_id={{.document_id}}" width="100%" height="100%" /></iframe>
-                {{else if eq .file_ext "pkg"}}
+                {{else if or (eq .file_ext "pkg") (eq .file_type "4")}}
                     <div id="loading" style="display: none;">
                         <span class="loading" style="width: 24px; height: 24px; display: block; float: left;"></span>
                         <span style="display: block; float: left; font-size: 14px; padding-top: 4px;"> Loading ...</span>
@@ -109,9 +106,11 @@
                         <input type="hidden" id="fileWebStatus" value="0">
                         <input type="hidden" id="innerFilePath" value="">
                         <div class="btn-group" role="group" aria-label="..." style="float: right">
+                            {{if ne .file_type "4"}}
                             <a type="button" id="decompression" class="btn btn-default" onclick="decompressFile()" title="在线解压后可生成在线服务地址">
                                 <i class="glyphicon glyphicon-folder-close"></i>&nbsp;在线解压
                             </a>
+                            {{end}}
                             <a type="button" id="webUrl" data-clipboard-text="copy" class="btn btn-default" onclick="getServeUrl()"> 
                                 <i class="glyphicon glyphicon-paperclip"></i>&nbsp;服务
                             </a>
@@ -140,14 +139,13 @@
 <script type="text/javascript" src="/static/js/common/utils.js"></script>
 <script type="text/javascript" src="/static/js/modules/view.js"></script>
 
-
 <script type="text/javascript">
     Layers.bindIframe("[name='history']", "文档修改历史", "508px", "1000px");
     $("[data-toggle='web-popover']").webuiPopover({animation: 'pop', autoHide:3000});
     if (parent.layoutOpen) {
         parent.layoutOpen();
     }
-    
+
     function showUrl (url) {
         layer.open({
             type: 1, skin: Layers.skin, shadeClose: true, shade : 0.6, maxmin: true, 
@@ -197,8 +195,8 @@
     
     // 用于加载压缩包内的文件树
     function loadFiletree(filePath) {
-        var serve = '/ViewPkg?filePath=' + filePath;
-        ajaxData(serve, {}, function (data) {
+        var docType = $("#fileType").val();
+        ajaxData('/ViewPkg', {'filePath': filePath, 'docType': docType}, function (data) {
             console.log(data);
             $('#fileView').jstree({
                 'core' : {
@@ -294,7 +292,7 @@
         var param = {'file': filePath, 'document_id': fileId};
         ajaxData('/Decompress', param, function (data) {
             ShowMessage("解压成功！", 1);
-            $("#webUrl").removeClass("disabled");
+            $("#webUrl,#clearPkg").removeClass("disabled");
         });
     }
 
@@ -310,11 +308,13 @@
             var url = data.url;
             $("#fileWebUrl").val(url);
             if (pre) {
-                if (data.exist == "false") $("#webUrl").addClass("disabled");
+                if (data.exist == "false") {
+                    $("#webUrl,#clearPkg").addClass("disabled");
+                }
                 setCopy("#webUrl", url, function () { return url }, true);
             } else {
                 $("#fileWebStatus").val("1");
-                showUrl(url + "/");
+                showUrl(url);
             }
         });
     }
@@ -325,8 +325,7 @@
         var param = {'file': filePath, 'document_id': fileId};
         ajaxData('/DelCompress', param, function (data) {
             ShowMessage("清除成功，服务地址已失效！", 1);
-            $("#webUrl").addClass("disabled");
-            $("#editFile").addClass("disabled");
+            $("#webUrl,#clearPkg,#editFile").addClass("disabled");
         });
     }
 

@@ -61,3 +61,10 @@ func (this *BaseController) uploadJsonError(message interface{}, data ...interfa
 		this.Abort(string(j))
 	}
 }
+
+func If(condition bool, trueVal, falseVal interface{}) interface{} {
+	if condition {
+		return trueVal
+	}
+	return falseVal
+}

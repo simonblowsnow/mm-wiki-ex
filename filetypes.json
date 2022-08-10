@@ -81,6 +81,7 @@
 	".txt":    "code",
 	".gitignore": "code",
 	".wav":    "audio",
+	".wma":    "audio",
 	".mp3":    "audio",
 	".ogg":    "audio",
 	".aac":    "audio",

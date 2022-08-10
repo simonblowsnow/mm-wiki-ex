@@ -107,6 +107,7 @@ FileTree.prototype.CreateElement = function (text, path, isDir, i, keyLen) {
 // 原始Names文件列表中末尾为斜杠的应该是目录，但附加Types数据更严谨些
 FileTree.prototype.Create = function (data) {
     data.Names.forEach((e, i) => {
+        e = e.replaceAll("\\", "/")
         // 此句防止目录或文件名带斜杠转义之类情况
         var fs = e.split("/");
         // 末尾空字符串是由于原字符串末尾带斜杠

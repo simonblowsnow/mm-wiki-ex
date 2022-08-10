@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <link
+      rel="stylesheet"
+      data-name="vs/editor/editor.main"
+      href="../min/vs/editor/editor.main.css"
+    />
+    <style>
+      html,
+      body {
+        position: relative;
+        padding: 0;
+        margin: 0;
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      var require = {
+        paths: { vs: "../min/vs" },
+        "vs/nls": { availableLanguages: { "*": "zh-cn" } },
+      };
+    </script>
+    <script src="../min/vs/loader.js"></script>
+    <script src="../min/vs/editor/editor.main.nls.js"></script>
+    <script src="../min/vs/editor/editor.main.nls.zh-cn.js"></script>
+    <script src="../min/vs/editor/editor.main.js"></script>
+
+    <script>
+      var editor = monaco.editor.create(document.body, {
+        value: "// monaco editor example",
+        language: "javascript",
+        theme: "vs-dark",
+      });
+      
+      let offset = 0;
+      let codeStr = `
+import monaco from "monaco-editor";
+
+var editor = monaco.editor.create(document.body, {
+  value: ["function x() {", '\tconsole.log("Hello world!");', "}"].join(
+    "\\n"
+  ),
+  language: "javascript",
+});
+`;
+
+      let id = setInterval(() => {
+        const oldValue = editor.getValue();
+        const addValue = codeStr[offset++];
+        editor.setPosition(new monaco.Position(0, 0));
+
+        if (addValue === undefined) {
+          clearInterval(id);
+          return;
+        }
+
+        editor.setValue(oldValue + addValue);
+      }, 60);
+    </script>
+  </body>
+</html>

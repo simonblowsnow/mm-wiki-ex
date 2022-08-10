@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/logs"
 	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
@@ -105,6 +104,7 @@ type Compressor struct {
 	fileRoot  string
 	serveRoot string
 	exist     bool
+	docType   int
 }
 
 func CreateCompressor(pageFile string) *Compressor {
@@ -119,6 +119,12 @@ func CreateCompressor(pageFile string) *Compressor {
 		ext:      ext,
 		exist:    false,
 	}
+}
+
+func (c *Compressor) GetGitRepo(innerFile string) {
+	// absFloder := filepath.Dir(c.path)
+	// absFilePath := filepath.Join(filepath.Dir(c.path), innerFile)
+
 }
 
 // 用于线上解压
@@ -393,7 +399,7 @@ func ExtractGZipInnerFile(gzFile string, innerFile string, dst *os.File) error {
 		}
 		return nil
 	}
-	logs.Error(IsGZ(gzFile))
+
 	return _ExtractTarInnerFile(gr, nil, innerFile, dst)
 }
 

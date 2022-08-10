@@ -20,7 +20,7 @@
     <!-- tipsy.css -->
     <link rel="stylesheet" href="/static/plugins/jquery-tipsy/stylesheets/tipsy.css" type="text/css" />
     <!-- For Excel View -->
-    <link rel="stylesheet" href="/static/plugins/xspreadsheet/dist/xspreadsheet.css">
+    <!-- <link rel="stylesheet" href="/static/plugins/xspreadsheet/dist/xspreadsheet.css"> -->
 
 
     <!-- Custom styles for this template -->
@@ -51,16 +51,31 @@
     <!-- fileTree -->
     <script type="text/javascript" src="/static/plugins/jstree/jstree.min.js"></script>
     <link rel="stylesheet" href="/static/plugins/jstree/themes/default/style.min.css">
-
+    
+    <!-- 两个编辑器：普通代码编辑器和md编辑器 -->
+    {{if and (eq .location "edit") (ne .file_suffix ".md")}}
+    <script type="text/javascript">
+        var require = {paths: { vs: "/static/plugins/monaco-editor/min/vs" }, "vs/nls": { availableLanguages: { "*": "zh-cn" } }};
+    </script>
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="/static/plugins/monaco-editor/min/vs/editor/editor.main.css"/>
+    <script src="/static/plugins/monaco-editor/min/vs/loader.js"></script>
+    <script src="/static/plugins/monaco-editor/min/vs/editor/editor.main.nls.js"></script>
+    <script src="/static/plugins/monaco-editor/min/vs/editor/editor.main.nls.zh-cn.js"></script>
+    <script src="/static/plugins/monaco-editor/min/vs/editor/editor.main.js"></script>
+    {{end}}
+    
+    {{if eq .file_suffix ".md"}}
     <!-- editor.md js-->
     <script type="text/javascript" src="/static/plugins/editor.md/editormd.min.js"></script>
-    <script type="text/javascript" src="/static/plugins/editor.md/lib/marked.min.js"></script>
+    <script type="text/javascript" src="/static/plugins/editor.md/lib/marked.min.js"></script>    
     <script type="text/javascript" src="/static/plugins/editor.md/lib/prettify.min.js"></script>
     <script type="text/javascript" src="/static/plugins/editor.md/lib/raphael.min.js"></script>
     <script type="text/javascript" src="/static/plugins/editor.md/lib/underscore.min.js"></script>
     <script type="text/javascript" src="/static/plugins/editor.md/lib/sequence-diagram.min.js"></script>
     <script type="text/javascript" src="/static/plugins/editor.md/lib/flowchart.min.js"></script>
     <script type="text/javascript" src="/static/plugins/editor.md/lib/jquery.flowchart.min.js"></script>
+    {{end}}
+
     <script type="text/javascript" src="/static/js/common/common.js"></script>
     <script type="text/javascript" src="/static/js/common/date.js"></script>
     <script type="text/javascript" src="/static/js/common/form.js"></script>
@@ -70,6 +85,7 @@
     <script type="text/javascript" src="/static/js/modules/page.js"></script>
 
 </head>
+
 <body id="frame-body">
 {{.LayoutContent}}
 </body>

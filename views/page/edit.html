@@ -2,14 +2,15 @@
     <form id="page_form" action="/page/modify" method="post" style="height: 98%" onsubmit="return false">
     <div class="row">{{$pageContent := .page_content}}{{$document := .document}}
         <div class="col-md-12">
-            <input type="hidden" name="document_id" value="{{$document.document_id}}">
+            <input type="hidden" id="docId" name="document_id" value="{{$document.document_id}}">
+            <input type="hidden" id="fileSuffix" name="file_suffix" value="{{.file_suffix}}">
             <input type="hidden" name="inner_file" value="{{.inner_file}}">
             <div class="row">
-                <div class="col-md-10">
+                <div class="col-md-10 col-sm-9 col-xs-7">
                     <input type="text" name="name" class="form-control" placeholder="请输入文档名称" value="{{$document.name}}" 
                     {{if or (eq .inner_file "1") (eq $document.parent_id "0")}} readonly="readonly" {{end}}>
                 </div>
-                <div class="col-md-2 text-center" >
+                <div class="col-md-2 col-sm-3 col-xs-5 text-center" style="padding-left: 0px; padding-right: 0px;">
                     <button type="button" class="btn btn-primary" onclick="Page.ajaxSave(this.form, {{.sendEmail}}, {{.autoFollowDoc}})"><i class="fa fa-save"></i> 保存</button>
                     <button type="button" class="btn btn-default" onclick="Page.cancelSave('确定要放弃此次修改吗?', '/document/index?document_id={{$document.document_id}}')"><i class="fa fa-mail-reply"></i> 取消</button>
                 </div>
@@ -17,21 +18,163 @@
         </div>
     </div>
     <div class="row" style="height: 98%; padding-top: 8px;">
-        <div class="col-md-12" style="height: 98%">
-            <div id="document_page_editor" style="height: 98%"></div>
+        {{if ne .file_suffix ".md"}}
+        <div class="row">
+            <div class="col-md-3 col-sm-6 col-xs-6" style="float: left; padding-left: 15px">
+                <label style="display: inline-block; position: relative; top: -2px; margin-right: 4px; color: #888">Language</label>
+                <select class="language-picker" style="display: inline-block; padding: 2px 3px; margin-bottom: 6px; width: 130px;
+                    background-color: #fff; border: 1px solid #bbb; font-size: 14px; vertical-align: middle;"></select>
+                <!-- json格式化 -->
+                {{if eq .file_suffix ".json"}}
+                <a style="margin-left: 15px;" onclick="jsonFormat()"><span class="fa fa-diamond">&nbsp;格式化</span></a>
+                {{end}}
+            </div>
+            <div class="col-md-3 col-sm-6 col-xs-6" style="float: left">
+                <label class="control-label" style="color: #888; padding-right: 5px;">Theme</label>
+                <select class="theme-picker" style="padding: 2px 3px; ">
+                    <option>Visual Studio</option>
+                    <option>Visual Studio Dark</option>
+                    <option>High Contrast Dark</option>
+                </select>
+            </div>
+        </div>
+        {{end}}
+        <div class="col-md-12" style="height: 97%">
+            <div id="document_page_editor" style="height: 99%; border-top: 1px solid #777;"></div>
         </div>
     </div>
     </form>
 </div>
+<!-- 第二个编辑器 -->
+<script type="text/javascript" src="/static/js/common/utils.js"></script>
 <script type="text/javascript">
-    if(parent.layoutClose) {
-        parent.layoutClose();
+    var fileSuffix = $("#fileSuffix").val().toLowerCase();
+    if (fileSuffix == ".md") {
+        if(parent.layoutClose) parent.layoutClose();
+        if(parent.hiddenScrollY) parent.hiddenScrollY();  
     }
-    if(parent.hiddenScrollY) {
-        parent.hiddenScrollY();
+
+    // 备选 codemirror
+    function initEditor() {
+        var lang = FileLangConf[fileSuffix] || "javascript";
+        var editor = monaco.editor.create(document.getElementById("document_page_editor"), {
+            value: "// monaco editor example",
+            language: lang,
+            theme: "vs-dark",
+        });
+        loadLangs(lang);
+        editor.setValue("{{$pageContent}}");
+        G.editor = editor;
+        if (lang == "javascript") esLimit();
     }
-    var storageId = "mm_wiki_doc_"+{{$document.document_id}}
-    $(function() {
+    // 语言选择框
+    function loadLangs(lang) {
+        var MODES = (function () {
+			var modesIds = monaco.languages.getLanguages().map(function (lang) {
+				return lang.id;
+			});
+			modesIds.sort();
+			return modesIds.map(function (modeId) {
+				return { modeId: modeId };
+			});
+		})();
+
+		var startModeIndex = 0;
+		for (var i = 0; i < MODES.length; i++) {
+			var o = document.createElement('option');
+			o.textContent = MODES[i].modeId;
+			if (MODES[i].modeId === lang) {
+				startModeIndex = i;
+			}
+			$('.language-picker').append(o);
+		}
+        $('.language-picker')[0].selectedIndex = startModeIndex;
+        $('.theme-picker')[0].selectedIndex = 1;
+        $('.language-picker').change(function () {
+            var lang = MODES[this.selectedIndex];
+            monaco.editor.setModelLanguage(G.editor.getModel(), lang.modeId);
+		});
+		$('.theme-picker').change(function () {
+			changeTheme(this.selectedIndex);
+		});
+    }
+    // 主题
+    function changeTheme(theme) {
+		var newTheme = theme === 1 ? 'vs-dark' : theme === 0 ? 'vs' : 'hc-black';
+		monaco.editor.setTheme(newTheme);
+	}
+    function jsonFormat() {
+        try {
+            var val = G.editor.getValue();
+            const res = JSON.parse(val);
+            G.editor.setValue( JSON.stringify(res, null, 2) );
+        } catch {
+            alert("格式错误！");
+        }
+    }
+    // 检查
+    function esLimit() {
+        monaco.editor.setModelMarkers(
+            G.editor.getModel(),
+            'javascript',
+            [{
+                startLineNumber: 2,
+                endLineNumber: 2,
+                startColumn: 1,
+                endColumn: 10,
+                severity: monaco.MarkerSeverity.Error,
+                message: `语法错误`,
+            }],
+        );
+    }
+
+    function handlePaste(e){
+        //判断图片类型的正则
+        var isImage=(/.jpg$|.jpeg$|.png$|.bmp$|.webp$|.gif$/i);
+        var e = e || event;
+        var img=null;
+        //IE支持window.clipboardData,chrome支持e.originalEvent.clipboardData
+        var clipboardData = e.originalEvent.clipboardData || window.clipboardData;
+        if(!(clipboardData&&clipboardData.items)){
+            return;
+        }
+
+        for(var i=0,length=clipboardData.items.length;i<length;i++){
+            var item=clipboardData.items[i];
+            if(item.kind==='file'&&isImage.test(item.type)){
+                var time = Date.parse(new Date());
+                img=item.getAsFile();
+                var newname=time + "-" +img.name;
+                var url='/image/upload?document_id={{$document.document_id}}&guid='+time;
+                var formData=new FormData();
+                var newImg=new File([img],newname,{type:img.type});
+                console.log(newImg)
+                formData.append('editormd-image-file',newImg);
+
+                //上传图片
+                var xhr=new XMLHttpRequest();
+                //上传结束
+                xhr.onload=function () {
+                    var data=JSON.parse(xhr.responseText);
+                    console.log(data)
+                    if (data.success === 1) {
+                        editor.insertValue("![image](" + data.url + ")\r\n");
+                    }else {
+                        alert(data.message)
+                    }
+                }
+
+                xhr.open('POST',url,true);
+                xhr.send(formData);
+                //当剪贴板里是图片时，禁止默认的粘贴
+                return false;
+            }
+        }
+    }
+
+    function init() {
+        var storageId = "mm_wiki_doc_" + $("#docId").val();
+        var pageContent = "{{$pageContent}}";
         editormd.katexURL = {
             js  : "/static/plugins/editor.md/lib/katex/katex.min",
             css : "/static/plugins/editor.md/lib/katex/katex.min"
@@ -62,7 +205,7 @@
             theme : "default",
             previewTheme : "default",
             editorTheme : "default",
-            markdown : {{$pageContent}},
+            markdown : pageContent,
             codeFold : true,
             placeholder: "欢迎使用 MM-Wiki，请使用 Markdown 规范编写！",
             //syncScrolling : false,
@@ -95,50 +238,9 @@
             imageUploadURL : "/image/upload?document_id={{$document.document_id}}",
             onload : function() {
                 //Vincent [46603415@qq.com] 新增图片粘贴上传功能 Start
-                $('#document_page_editor').on("paste",function(e){
-                    //判断图片类型的正则
-                    var isImage=(/.jpg$|.jpeg$|.png$|.bmp$|.webp$|.gif$/i);
-                    var e = e || event;
-                    var img=null;
-                    //IE支持window.clipboardData,chrome支持e.originalEvent.clipboardData
-                    var clipboardData = e.originalEvent.clipboardData || window.clipboardData;
-                    if(!(clipboardData&&clipboardData.items)){
-                        return;
-                    }
-
-                    for(var i=0,length=clipboardData.items.length;i<length;i++){
-                        var item=clipboardData.items[i];
-                        if(item.kind==='file'&&isImage.test(item.type)){
-                            var time = Date.parse(new Date());
-                            img=item.getAsFile();
-                            var newname=time + "-" +img.name;
-                            var url='/image/upload?document_id={{$document.document_id}}&guid='+time;
-                            var formData=new FormData();
-                            var newImg=new File([img],newname,{type:img.type});
-                            console.log(newImg)
-                            formData.append('editormd-image-file',newImg);
-
-                            //上传图片
-                            var xhr=new XMLHttpRequest();
-                            //上传结束
-                            xhr.onload=function () {
-                                var data=JSON.parse(xhr.responseText);
-                                console.log(data)
-                                if (data.success === 1) {
-                                    editor.insertValue("![image](" + data.url + ")\r\n");
-                                }else {
-                                    alert(data.message)
-                                }
-                            }
-
-                            xhr.open('POST',url,true);
-                            xhr.send(formData);
-                            //当剪贴板里是图片时，禁止默认的粘贴
-                            return false;
-                        }
-                    }
-                });
+                $('#document_page_editor').on("paste", handlePaste);
                 //Vincent [46603415@qq.com] 新增图片粘贴上传功能 End
+
                 var docStorage = Storage.get(storageId);
                 if (docStorage !== "") {
                     layer.confirm("是否恢复为上次未提交的本地文档？", {
@@ -165,6 +267,12 @@
                 Storage.set(storageId, editor.getMarkdown());
             }
         });
-    });
-
+    }
+    
+    
+    // 入口
+    $($("#fileSuffix").val() == ".md" ? init : initEditor);
+    
+    
+    
 </script>

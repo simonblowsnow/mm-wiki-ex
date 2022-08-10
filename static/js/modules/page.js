@@ -2,8 +2,11 @@
  * Copyright (c) 2018 phachon@163.com
  */
 
-var Page = {
+var G = {
+    editor: null
+};
 
+var Page = {
     /**
      * ajax Save
      * @param element
@@ -97,6 +100,10 @@ var Page = {
                         success: response,
                         data: {'comment': commentText, 'is_notice_user': isNoticeUser, 'is_follow_doc': isFollowDoc}
                     };
+                    //【新增·非md编辑器的内容提交】
+                    if (G.editor != null) {
+                        options.data['document_page_editor-markdown-doc'] = G.editor.getValue();
+                    }
                     $(element).ajaxSubmit(options);
                 }
                 // if (commentText && commentText.length > 0) {

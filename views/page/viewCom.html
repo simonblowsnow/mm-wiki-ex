@@ -34,13 +34,20 @@
         {{else if eq .file_ext "ppt"}}
             <div id="viewPPT"></div>
         {{else if eq .file_ext "code"}}
-            <pre><code>{{.page_content}}</code></pre>
+            {{if eq .file_suffix ".json"}}
+                <!-- json文件容易比较大，稍微大点用<code>渲染就会比较卡 -->
+                <pre style="white-space:pre-wrap; white-space:-moz-pre-wrap; white-space:-pre-wrap; white-space:-o-pre-wrap; word-wrap:break-word;">{{.page_content}}</pre>
+            {{else}}
+                <pre><code>{{.page_content}}</code></pre>
+            {{end}}
         {{else if eq .file_ext "video"}}
             <div style="padding: 0 10px 10px 10px; min-height: 400px; overflow: auto; display: flex; justify-content: center;">
                 <video id="my-player" class="video-js" controls preload="auto" poster="//vjs.zencdn.net/v/oceans.png" data-setup='{}'>
                     <source src="{{.file_url}}" ></source>
                 </video>
             </div>
+        {{else}}
+            <pre><code>{{.page_content}}</code></pre>
         {{end}}
     </div>
     
@@ -157,8 +164,6 @@
     // ===========================================End Excel=============================================
 
     function loadPPT(url) {
-        console.log(url);
-        
         $("#viewPPT").pptxToHtml({
             pptxFileUrl: url,
             slideMode: false,
