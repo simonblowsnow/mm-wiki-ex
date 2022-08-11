@@ -486,11 +486,6 @@ func (this *DocumentController) Delete() {
 		this.jsonError("删除文档失败！")
 	}
 
-	err = models.DocumentModel.DeleteDBAndFile(documentId, spaceId, this.UserId, pageFile, document["type"])
-	if err != nil {
-		this.ErrorLog("删除文档 " + documentId + " 失败：" + err.Error())
-		this.jsonError("删除文档失败！")
-	}
 	// 如果是压缩包，则删除临时缓存
 	tp := utils.GetFileType(pageFile)
 	if docType == models.Document_Type_File && tp == "pkg" {
@@ -499,11 +494,25 @@ func (this *DocumentController) Delete() {
 		if flag {
 			os.RemoveAll(tempPath)
 		}
+		// 在线服务的临时文件目录
+		c, _ := ComCompress(this.Controller, false)
+		if c.exist {
+			absRoot := utils.Document.GetAbsPageFileByPageFile(c.serveRoot)
+			if flag, _ := utils.File.PathIsExists(absRoot); flag {
+				os.RemoveAll(absRoot)
+			}
+		}
 	}
 	// 如果是转储仓库，则同步删除资源
 	if docType == models.Document_Type_Git {
 		tempPath := utils.GetRepoAbsPath(pageFile)
 		os.RemoveAll(tempPath)
+	}
+
+	err = models.DocumentModel.DeleteDBAndFile(documentId, spaceId, this.UserId, pageFile, document["type"])
+	if err != nil {
+		this.ErrorLog("删除文档 " + documentId + " 失败：" + err.Error())
+		this.jsonError("删除文档失败！")
 	}
 
 	// delete attachment
