@@ -145,16 +145,18 @@ func (d *document) Replace(pageFile string, content string) error {
 }
 
 // update document
-func (d *document) Update(oldPageFile string, name string, content string, docType int, nameIsChange bool) (err error) {
+func (d *document) Update(oldPageFile string, name string, content string, docType int, nameIsChange bool, onlyRename bool) (err error) {
 
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
 	absOldPageFile := d.GetAbsPageFileByPageFile(oldPageFile)
-
-	err = ioutil.WriteFile(absOldPageFile, []byte(content), os.ModePerm)
-	if err != nil {
-		return
+	//【修改·某些文件不能更改其内容，例如压缩包、非文本文件】
+	if !onlyRename {
+		err = ioutil.WriteFile(absOldPageFile, []byte(content), os.ModePerm)
+		if err != nil {
+			return
+		}
 	}
 	if nameIsChange {
 		filePath := filepath.Dir(absOldPageFile)
@@ -212,6 +214,15 @@ func (d *document) DeleteSpace(name string) error {
 	}
 
 	return os.RemoveAll(absSpaceDir)
+}
+
+func (d *document) PageIsExists(pageFile string) bool {
+	absPageFile := d.GetAbsPageFileByPageFile(pageFile)
+	ok, err := File.PathIsExists(absPageFile)
+	if err != nil {
+		return false
+	}
+	return ok
 }
 
 func (d *document) Move(movePath string, targetPath string, docType int) error {

@@ -179,6 +179,7 @@ func (this *PageController) Edit() {
 
 	documentId := this.GetString("document_id", "")
 	innerFile := this.GetString("innerFile", "")
+	category := this.GetString("category", "")
 	if documentId == "" {
 		this.ViewError("文档未找到！")
 	}
@@ -233,13 +234,17 @@ func (this *PageController) Edit() {
 	}
 
 	// get document content
-	documentContent, err := utils.Document.GetContentByPageFile(pageFile)
-	if err != nil {
-		this.ErrorLog("查找文档 " + documentId + " 失败：" + err.Error())
-		this.ViewError("文档不存在！")
+	documentContent := "该类型文件不支持在线编辑其内容！"
+	t := category
+	notTxt := (t == "pkg" || t == "word" || t == "ppt" || t == "pdf" || t == "image" || t == "video" || t == "other")
+	if !notTxt {
+		documentContent, err = utils.Document.GetContentByPageFile(pageFile)
+		if err != nil {
+			this.ErrorLog("查找文档 " + documentId + " 失败：" + err.Error())
+			this.ViewError("文档不存在！")
+		}
 	}
 	ext := strings.ToLower(path.Ext(pageFile))
-
 	autoFollowDoc := models.ConfigModel.GetConfigValueByKey(models.ConfigKeyAutoFollowdoc, "0")
 	sendEmail := models.ConfigModel.GetConfigValueByKey(models.ConfigKeySendEmail, "0")
 	this.Data["sendEmail"] = sendEmail
@@ -248,6 +253,7 @@ func (this *PageController) Edit() {
 	this.Data["document"] = document
 	this.Data["location"] = "edit"
 	this.Data["file_suffix"] = ext
+	this.Data["category"] = category
 	this.viewLayout("page/edit", "document_page")
 }
 
@@ -263,6 +269,7 @@ func (this *PageController) Modify() {
 	isNoticeUser := strings.TrimSpace(this.GetString("is_notice_user", "0"))
 	isFollowDoc := strings.TrimSpace(this.GetString("is_follow_doc", "0"))
 	innerFile := this.GetString("inner_file", "0")
+	category := this.GetString("category", "category")
 
 	// rm document_page_editor-markdown-doc
 	this.Ctx.Request.PostForm.Del("document_page_editor-markdown-doc")
@@ -312,7 +319,16 @@ func (this *PageController) Modify() {
 	if document["parent_id"] == "0" {
 		newName = document["name"]
 	}
+
 	docType, _ := strconv.Atoi(document["type"])
+	isGit, isPkg := docType == models.Document_Type_Git, category == "pkg"
+	var c *Compressor
+	var errC error
+	document["category"] = category
+	if innerFile == "1" || isPkg || isGit {
+		c, errC = ComCompress(this.Controller, false)
+	}
+
 	// check document name
 	if newName != document["name"] {
 		newDocument, err := models.DocumentModel.GetDocumentByNameParentIdAndSpaceId(newName,
@@ -328,6 +344,21 @@ func (this *PageController) Modify() {
 		if ext := strings.ToLower(path.Ext(newName)); docType == models.Document_Type_Page && ext == ".md" {
 			docType = models.Document_Type_File
 		}
+
+		// 修改压缩包名称及Git仓库名时，应同步修改其对应资源目录名，否则会丢失关联
+		if (isGit && innerFile == "0") || (isPkg && c.exist) {
+			resFile := If(isGit, utils.GetRepoPageDir(c.pageFile), c.serveRoot).(string)
+			name := c.GetName(newName, "", "")
+			targetFile := filepath.Join(filepath.Dir(resFile), name)
+			flag := utils.Document.PageIsExists(targetFile)
+			if flag {
+				this.jsonError("操作失败，该文件对应资源路径下存在与目标文件名相同的目录！")
+			}
+			err = utils.Document.Move(resFile, targetFile, models.Document_Type_File)
+			if err != nil {
+				this.jsonError(err.Error())
+			}
+		}
 	}
 
 	// update document and file content
@@ -339,13 +370,9 @@ func (this *PageController) Modify() {
 
 	// 【新增】仅用于压缩包内部文件修改逻辑
 	if innerFile == "1" {
-		docType, _ := strconv.Atoi(document["type"])
-		isGit := docType == models.Document_Type_Git
-		c, err := ComCompress(this.Controller, false)
-		if err != nil || (!c.exist && !isGit) {
+		if errC != nil || (!c.exist && !isGit) {
 			this.jsonError("修改失败，该文件可能未被解压！")
 		}
-
 		pageFile := filepath.Join(If(isGit, utils.GetRepoPageDir(c.pageFile), c.serveRoot).(string), newName)
 		err = models.DocumentModel.UpdateFile(pageFile, documentContent, updateValue)
 		if err != nil {

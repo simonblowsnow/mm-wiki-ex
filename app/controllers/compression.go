@@ -121,21 +121,24 @@ func CreateCompressor(pageFile string) *Compressor {
 	}
 }
 
-func (c *Compressor) GetGitRepo(innerFile string) {
-	// absFloder := filepath.Dir(c.path)
-	// absFilePath := filepath.Join(filepath.Dir(c.path), innerFile)
-
+func (c *Compressor) GetName(pageFile string, ext string, filename string) string {
+	if ext == "" {
+		ext = strings.ToLower(path.Ext(pageFile))
+	}
+	if filename == "" {
+		_, filename = filepath.Split(pageFile)
+	}
+	// 获取除后缀外文件名，处理.tar.gz特殊情况
+	name := strings.TrimSuffix(filename, path.Ext(pageFile))
+	if ext == ".gz" && len(name) >= 4 && strings.ToLower(name[len(name)-4:]) == ".tar" {
+		name = name[:len(name)-4]
+	}
+	return name
 }
 
 // 用于线上解压
 func (c *Compressor) InitCompress(spaceId string, extract bool) error {
-	ext := c.ext
-	// 获取除后缀外文件名，处理.tar.gz特殊情况
-	name := strings.TrimSuffix(c.name, path.Ext(c.pageFile))
-	if ext == ".gz" && len(name) >= 4 && strings.ToLower(name[len(name)-4:]) == ".tar" {
-		name = name[:len(name)-4]
-	}
-	c.folder = name
+	c.folder = c.GetName(c.pageFile, c.ext, c.name)
 
 	// 检查服务根目录是否存在
 	docRootDir := beego.AppConfig.String("document::root_dir")
