@@ -15,7 +15,8 @@ data/
 install/install
 install/install.exe
 install.lock
-
+logs/
+result.csv
 .idea/
 
 node_modules/

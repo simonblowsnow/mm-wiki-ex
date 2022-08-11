@@ -5,8 +5,9 @@
 </h2>
 
 <div align="center">
-
-MM-Wiki 是一个轻量级的企业知识分享与团队协同软件，可用于快速构建企业 Wiki 和团队知识分享平台。部署方便，使用简单，帮助团队构建一个信息共享、文档管理的协作环境。
+MM-Wiki-EX是对[MM-Wiki项目](https://github.com/phachon/mm-wiki.git "MM-Wiki项目")的超级增强，基于截止2022年7月的最新版本v0.2.1。
+MM-Wiki 是一个轻量级的企业知识分享与团队协同软件，可用于快速构建企业 Wiki 和团队知识分享平台。部署方便，使用简单，帮助团队构建一个信息共享、文档管理的协作环境。 
+    
 </br>
 
 [![stable](https://img.shields.io/badge/stable-stable-green.svg)](https://github.com/simonblowsnow/mm-wiki-ex/) 
@@ -17,6 +18,21 @@ MM-Wiki 是一个轻量级的企业知识分享与团队协同软件，可用于
 [![release](https://img.shields.io/github/release/phachon/mm-wiki.svg?style=flat)](https://github.com/simonblowsnow/mm-wiki-ex/releases) 
 
 </div>
+## MM-Wiki-EX 扩充如下功能：  
++ 支持文件上传，上传文件和原md文件同等地位。
++ 支持将文件开放服务，提供资源网络路径。
++ 支持在线将md格式文件修改为常规文件格式，例如*.js, *.json。
++ 支持文件在线预览，目前支持的格式：PDF、Excel、Word、Image、Video及其它文本型文件。
++ 支持Excel文件在线编辑保存功能。
++ 支持压缩包在线解压，及内部文件预览，目前支持的格式：Zip、Tar、Tar.gz、Gz、Tgz
++ 支持压缩包内文件解压后在线编辑。
++ 支持将压缩包解压后的目录开放为网络服务。
++ 支持云资源转储，可将网络文件或Git仓库转储至本系统。
++ 支持转储后的Git仓库开放网络服务，及内部文件在线预览和修改。
++ 增加针对非md文件的编辑器，提供基于vscode内核的代码在线编辑功能。
++ 优化文件树图标，显示常规文件格式的个性化图标。
+
+本项目定位：一个知识和资源共享管理的平台。可作为团队内部文件管理系统、资源管理系统。
 
 # 特点
 - 部署方便，基于 golang 编写，只需要下载对于平台下二进制文件执行即可。
@@ -184,19 +200,19 @@ $ go build ./
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 ## 支持
-请作者喝杯茶吧！
+请本作者喝杯coffee吧！
 
 ![wechat](./static/images/preview/wechat_1.png) 
 
 ![alipay](./static/images/preview/alipay_2.png)
 
 ## 反馈
-- 官方 QQ 交流群：853467682
+- 原官方 QQ 交流群：853467682
 - 如果您喜欢该项目，请 [Star](https://github.com/simonblowsnow/mm-wiki-ex/stargazers).
 - 如果在使用过程中有任何问题， 请提交 [Issue](https://github.com/simonblowsnow/mm-wiki-ex/issues).
 - 如果您发现并解决了bug，请提交 [Pull Request](https://github.com/simonblowsnow/mm-wiki-ex/pulls).
 - 如果您想二次开发，欢迎 [Fork](https://github.com/simonblowsnow/mm-wiki-ex/network/members).
-- 如果你想交个朋友，欢迎发邮件给 [phachon@163.com](mailto:phachon@163.com).
+- 如果你想交个朋友，欢迎发邮件给 [529472731@qq.com](mailto:529472731@qq.com).
 
 ## License
 

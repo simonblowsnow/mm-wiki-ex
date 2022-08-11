@@ -312,6 +312,7 @@ func (this *PageController) Modify() {
 	if document["parent_id"] == "0" {
 		newName = document["name"]
 	}
+	docType, _ := strconv.Atoi(document["type"])
 	// check document name
 	if newName != document["name"] {
 		newDocument, err := models.DocumentModel.GetDocumentByNameParentIdAndSpaceId(newName,
@@ -323,12 +324,17 @@ func (this *PageController) Modify() {
 		if len(newDocument) != 0 {
 			this.jsonError("该文档名称已经存在！")
 		}
+		// 将平台默认md文件修改为带md后缀文件时，直接修改文件类型，与系统逻辑保持统一
+		if ext := strings.ToLower(path.Ext(newName)); docType == models.Document_Type_Page && ext == ".md" {
+			docType = models.Document_Type_File
+		}
 	}
 
 	// update document and file content
 	updateValue := map[string]interface{}{
 		"name":         newName,
 		"edit_user_id": this.UserId,
+		"type":         docType,
 	}
 
 	// 【新增】仅用于压缩包内部文件修改逻辑
