@@ -381,6 +381,7 @@ func (this *DocumentController) Move() {
 		"type":      document["type"],
 		"path":      targetDocument["path"] + "," + targetId,
 	}
+
 	_, newPageFile, err := models.DocumentModel.GetParentDocumentsByDocument(newDocument)
 	if err != nil {
 		this.ErrorLog("移动文档 " + documentId + " 失败：" + err.Error())
@@ -392,6 +393,25 @@ func (this *DocumentController) Move() {
 		"parent_id":    targetId,
 		"path":         targetDocument["path"] + "," + targetId,
 		"edit_user_id": this.UserId,
+	}
+	// Git仓库移动逻辑
+	docType, _ := strconv.Atoi(document["type"])
+	if docType == models.Document_Type_Git {
+		// 后续没有真正使用到该字段，故使用目录逻辑来代替
+		document["type"] = "2"
+		oldRepo, _ := utils.GetRepoPageFile(oldPageFile, false)
+		newRepo, _ := utils.GetRepoPageFile(newPageFile, false)
+		newFolder := filepath.Dir(newRepo)
+		if utils.Document.PageIsExists(newFolder) {
+			this.jsonError("移动文档失败，目标资源存在同名仓库！")
+		}
+
+		newParent := filepath.Dir(newFolder)
+		newAbsParent := utils.Document.GetAbsPageFileByPageFile(newParent)
+		if flag, _ := utils.File.PathIsExists(newAbsParent); !flag {
+			utils.Document.CreateFolder(newAbsParent)
+		}
+		utils.Document.Move(oldRepo, newRepo, models.Document_Type_Dir)
 	}
 	_, err = models.DocumentModel.MoveDBAndFile(documentId, spaceId, updateValue,
 		oldPageFile, newPageFile, document["type"], "移动文档到 "+targetDocument["name"])
