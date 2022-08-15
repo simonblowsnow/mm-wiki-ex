@@ -88,6 +88,8 @@
 	".iso": 	"other",
 	".dll": 	"other",
 	".exe": 	"other",
+	".jar": 	"other",
+	".war": 	"other",
 	".msi": 	"other",
 	".elf": 	"other",
 	".sys": 	"other",
@@ -98,5 +100,6 @@
 	".ko": 		"other",
 	".so": 		"other",
 	".orig": 	"other",
-	".o": 		"other"
+	".o": 		"other",
+	".class": 	"other"
 }
