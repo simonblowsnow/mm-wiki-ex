@@ -145,6 +145,7 @@
     if (parent.layoutOpen) {
         parent.layoutOpen();
     }
+    var InnerIsServer = null;
 
     function showUrl (url) {
         layer.open({
@@ -193,14 +194,23 @@
         if ($("#document_page_view").length > 0 && fileExt != ".html") TextViewInit();       
     };
     
+    function htmlInNextLevel(data) {
+        if (data.length > 1) return null;
+        var fs = data[0].children;
+        for (var i = 0; i < fs.length; i ++) {
+            if (fs[i].type == 'file' && (fs[i].text == "index.html" || fs[i].text == "index.htm")) return data[0].text;
+        }
+        return null;
+    }
+
     // 用于加载压缩包内的文件树
     function loadFiletree(filePath) {
         var docType = $("#fileType").val();
         ajaxData('/ViewPkg', {'filePath': filePath, 'docType': docType}, function (data) {
-            console.log(data);
+            var treeData = FileList2Tree(data);
             $('#fileView').jstree({
                 'core' : {
-                    'data': FileList2Tree(data)
+                    'data': treeData
                 },
                 "themes": { "stripes": true },
                 'types' : {
@@ -213,6 +223,7 @@
                 "plugins": ["changed", "types"]
             });
             // 提前获取压缩包的网络服务地址，为复制按钮做准备
+            InnerIsServer = htmlInNextLevel(treeData);
             getServeUrl("pre");
         });
 
@@ -306,6 +317,8 @@
         var param = {'file': filePath, 'document_id': fileId, 'pre': pre || ''};
         ajaxData('/GetServeUrl', param, function (data) {
             var url = data.url;
+            // 兼顾原型文件压缩包多一层情况
+            if (InnerIsServer) url += InnerIsServer + "/";
             $("#fileWebUrl").val(url);
             if (pre) {
                 if (data.exist == "false") {

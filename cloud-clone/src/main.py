@@ -5,7 +5,9 @@ Created on 2021年12月13日 By Simon
 
 ==================================================================
 '''
-
+import sys
+sys.path.append("./")
+sys.path.append("../")
 import ctypes
 from multiprocessing import Manager, freeze_support
 from src.clone import clone_res, CloneJob
@@ -15,6 +17,7 @@ from flask_cors import CORS
 from src.config import Config as C
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
+
 
 '''
 原理：
@@ -28,7 +31,7 @@ status: 0 - 未执行，1 - 执行中，2 - 已完成，3 - 已失败， -1 - �
 
 @app.route('/')
 def index():
-    return 'Welcome，This is a cloud resource clone server'
+    return 'Welcome，This is a cloud resource clone server'
 @app.route('/cloneRes', methods=['GET','POST'])
 def _clone_res():
     R = request.form if request.method=='POST' else request.args
