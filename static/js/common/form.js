@@ -152,12 +152,12 @@ Form.submitClone = function () {
     $("#progress").html("Waiting...");
     $("#btnSubmit").attr("disabled","disabled");
     
-    var server = "http://localhost:8885/cloneRes";
+    var server = "/filecloud/cloneRes";
     var params = {'isFile': isFile, 'url': url};
     $.post(server, params, function (res) {
         if (res.error) return alert(res.message);
         var jobId = res.data.jobId;
-        var urlR = "http://localhost:8885/getStatus?jobId=" + jobId;
+        var urlR = "/filecloud/getStatus?jobId=" + jobId;
         createRequest(urlR, isFile, name); 
     }).error(function () {
         alert("网络错误，或服务未启动！");
