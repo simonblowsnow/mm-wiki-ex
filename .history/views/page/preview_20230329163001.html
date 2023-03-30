@@ -1,0 +1,76 @@
+<div class="container-fluid H100" style="padding-right: 1px !important;">
+    <div class="row H100">{{$pageContent := .page_content}}
+
+        <div class="col-md-12 H100" style="padding: 0px 4px;">
+            <div class="panel-body PadH" style="display: none;">
+                <div class="row">
+                    <!-- 格式判定 -->
+                    {{$comType := 1}}
+                    {{if or (eq .file_ext ".md" ".MD" "pkg") (eq .file_type "4")}}{{$comType = 0}}{{end}}
+                    
+                    <div class="col-md-4 text-right">
+                        <div class="btn-group" role="group" aria-label="...">
+                            <!-- 文件地址及类型 -->
+                            <input type="hidden" id="fileId" value="{{.document_id}}">
+                            <input type="hidden" id="fileType" value="{{.file_type}}">
+                            <input type="hidden" id="filePath" value="{{.file_path}}">
+                            <input type="hidden" id="fileUrl" value="{{.file_url}}">
+                            <input type="hidden" id="fileExt" value="{{.file_ext}}">
+                            <!-- Trigger -->
+                            <!-- <input type="hidden" id="fileUrlAll" value=""> -->
+                            <a type="button" id="clipBtn" data-clipboard-text="Just" class="btn btn-default"><i class="glyphicon glyphicon-paperclip"></i>&nbsp;下载</a>
+                            
+                        </div>
+                    </div>
+                </div>
+                <hr style="margin: 0">
+            </div>
+
+            <div class="panel-body md-view-box H100" style="padding: 0px">
+                {{if and (eq $comType 0) (ne .file_ext "pkg") (ne .file_type "4")}}
+                    <div class="dir-preview-box">
+                        <div class="dir-preview-btn">
+                            展开目录
+                        </div>
+                        <div class="page-view-dir-toc" id="page-view-dir-toc"></div>
+                    </div>
+                {{end}}
+
+                {{if eq $comType 1}}
+                    <iframe frameborder="0" scrolling="auto" style="vertical-align: top;" frameborder="0" src="/page/viewCom?document_id={{.document_id}}" width="100%" height="100%" /></iframe>
+                {{else if or (eq .file_ext "pkg") (eq .file_type "4")}}
+                    <div id="loading" style="display: none;">
+                        <span class="loading" style="width: 24px; height: 24px; display: block; float: left;"></span>
+                        <span style="display: block; float: left; font-size: 14px; padding-top: 4px;"> Loading ...</span>
+                    </div>
+                    <div id="fileView" style="padding-left: 60px; padding-top: 25px;"></div>
+                {{else}}
+                    <div id="document_page_view" style="padding: 0 10px 10px 10px;">
+                        <textarea style="display:none;">{{$pageContent}}</textarea>
+                    </div>
+                {{end}}
+                
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/static/plugins/md-toc/md-toc.js"></script>
+<script src='/static/plugins/jquery-tipsy/javascripts/jquery.tipsy.js'></script>
+<script src="/static/plugins/clipboard/clipboard.min.js"></script>
+<script type="text/javascript" src="/static/js/common/utils.js"></script>
+<script type="text/javascript" src="/static/js/modules/view.js"></script>
+
+<script type="text/javascript">
+    // $(document).ready(function() { $("#fileUrlAll").val(getFileUrl()); });
+    
+    // ====================================*以下代码来自view.html，原文件更新时请同步替换*=============================
+    if (parent.layoutOpen) {
+        parent.layoutOpen();
+    }
+    var InnerIsServer = null;
+
+    
+    $(function() {
+        init();
+    });
+</script>

@@ -42,6 +42,10 @@ func (this *TemplateController) Prepare() {
 	}
 
 	if !this.isLogin() {
+		// TODO: 此处应该存在安全漏洞，单为了兼顾分享预览功能，暂不修改(可将文档自增id换成hash？)
+		if this.controllerName == "page" && (this.actionName == "view" || strings.ToLower(this.actionName) == "viewcom") {
+			return
+		}
 		if this.IsAjax() {
 			this.JsonError("未登录或登录已失效！", nil, "/author/index")
 		} else {

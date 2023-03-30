@@ -3,7 +3,6 @@ package controllers
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -45,7 +44,8 @@ var FILETYPES = utils.FILETYPES
 // ==================================================== 业务代码开始 ===================================================
 // document page view
 func (this *PageController) View() {
-
+	
+	style := this.GetString("style", "all")
 	documentId := this.GetString("document_id", "")
 	if documentId == "" {
 		this.ViewError("文档未找到！")
@@ -151,9 +151,7 @@ func (this *PageController) View() {
 	}
 
 	// 拼接文件网络地址
-	href := this.Ctx.Request.Referer()
-	u, _ := url.Parse(href)
-	host := If(href[:5] == "https", "https://"+u.Host, "http://"+u.Host)
+	host := GetHost(this.Ctx)
 
 	this.Data["location"] = "view"
 	this.Data["is_editor"] = isEditor
@@ -168,10 +166,11 @@ func (this *PageController) View() {
 	this.Data["file_path"] = pageFile
 	this.Data["file_suffix"] = ext
 	this.Data["file_ext"] = fileExt
-	this.Data["file_url"] = host.(string) + "/file/" + pageFile
+	this.Data["file_url"] = host + "/file/" + pageFile
 	this.Data["document_id"] = documentId
 
-	this.viewLayout("page/view", "document_page")
+	html := If(style == "all", "page/view", "page/preview")
+	this.viewLayout(html.(string), "document_page")
 }
 
 // page edit
@@ -490,6 +489,7 @@ func (this *PageController) Display() {
 		}
 	}
 
+	this.Data["doc_id"] = documentId
 	this.Data["create_user"] = createUser
 	this.Data["edit_user"] = editUser
 	this.Data["document"] = document
@@ -731,12 +731,9 @@ func RequestFile(self *PageController, pageFile string, info DocInfo) {
 }
 
 func GetHost(ctx *context.Context) string {
-	href := ctx.Request.Referer()
-	u, _ := url.Parse(href)
-	host := "http://" + u.Host
-	if href[:5] == "https" {
-		host = "https://" + u.Host
-	}
+	data := ctx.Request.Host
+	scheme := strings.ToLower(strings.Split(ctx.Request.Proto, "/")[0])
+	host := scheme + "://" + data
 	return host
 }
 

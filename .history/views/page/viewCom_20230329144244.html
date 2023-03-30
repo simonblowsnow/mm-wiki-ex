@@ -1,0 +1,261 @@
+
+<div class="panel-body md-view-box H100 PadH" style="padding: 0px">
+    <!-- 文件地址及类型 -->
+    <input type="hidden" id="fileId" value="{{.document_id}}">
+    <input type="hidden" id="fileType" value="{{.file_type}}">
+    <input type="hidden" id="filePath" value="{{.file_path}}">
+    <input type="hidden" id="fileUrl" value="{{.file_url}}">
+    <input type="hidden" id="fileExt" value="{{.file_ext}}">
+    <input type="hidden" id="spaceId" value="{{.space_id}}">
+    
+    <!-- 操作按钮 -->
+    <div style="position:absolute; height: 50px; right: 2px; top: 6px; display: block; z-index: 99999">
+        <div class="btn-group" role="group" aria-label="...">
+            {{if eq .file_ext "excel"}}
+            <a type="button" id="saveFile" class="btn btn-default" onclick="saveExcel()">
+                <i class="glyphicon glyphicon-floppy-disk" style="color: #d60a0a"></i>&nbsp;保存
+            </a>
+            {{end}}
+        </div>
+    </div>
+
+    <div class="H100" style="">
+        <!-- image -->
+        {{if eq .file_ext "image"}}
+            <div id="file_img_view" style="padding: 0 10px 10px 10px; min-height: 300px; overflow: auto; display: flex; justify-content: center;">
+                <img id="imgView" style="border: 1px solid #ccc;" alt="file_path" src="{{.file_url}}" onclick="showImg(this)">
+            </div>
+        {{else if eq .file_ext "pdf"}}
+            <iframe frameborder="0" scrolling="auto" type="application/x-google-chrome-pdf" src="{{.file_url}}" width="100%" height="100%" />
+        {{else if eq .file_ext "word"}}
+            <div id="viewWord" style="overflow-x: scroll;"> 暂不支持Word-2003格式（.doc）</div>
+        {{else if eq .file_ext "excel"}}
+            <div id="viewExcel" style="width: 100%; min-height: 320px"></div>
+        {{else if eq .file_ext "ppt"}}
+            <div id="viewPPT"> PPT在线预览可能内容显示不完整</div>
+        {{else if eq .file_ext "code"}}
+            {{if eq .file_suffix ".json"}}
+                <!-- json文件容易比较大，稍微大点用<code>渲染就会比较卡 -->
+                <pre style="white-space:pre-wrap; white-space:-moz-pre-wrap; white-space:-pre-wrap; white-space:-o-pre-wrap; word-wrap:break-word;">{{.page_content}}</pre>
+            {{else}}
+                <pre><code>{{.page_content}}</code></pre>
+            {{end}}
+        {{else if eq .file_ext "video"}}
+            <div style="padding: 0 10px 10px 10px; min-height: 400px; overflow: auto; display: flex; justify-content: center;">
+                <video id="my-player" class="video-js" controls preload="auto" poster="//vjs.zencdn.net/v/oceans.png" data-setup='{}'>
+                    <source src="{{.file_url}}" ></source>
+                </video>
+            </div>
+        {{else}}
+            <pre><code>{{.page_content}}</code></pre>
+        {{end}}
+    </div>
+    
+</div>
+
+<script type="text/javascript" src="/static/js/common/utils.js"></script>
+<script type="text/javascript" src="/static/js/modules/view.js"></script>
+
+
+<script type="text/javascript">
+    hljs.highlightAll();
+    var xspr; // = x_spreadsheet(document.getElementById('viewExcel'));
+    var saveIcon = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/PjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+PHN2ZyB0PSIxNTc3MTc3MDkyOTg4IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjI2NzgiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPjxkZWZzPjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+PC9zdHlsZT48L2RlZnM+PHBhdGggZD0iTTIxMy4zMzMzMzMgMTI4aDU5Ny4zMzMzMzRhODUuMzMzMzMzIDg1LjMzMzMzMyAwIDAgMSA4NS4zMzMzMzMgODUuMzMzMzMzdjU5Ny4zMzMzMzRhODUuMzMzMzMzIDg1LjMzMzMzMyAwIDAgMS04NS4zMzMzMzMgODUuMzMzMzMzSDIxMy4zMzMzMzNhODUuMzMzMzMzIDg1LjMzMzMzMyAwIDAgMS04NS4zMzMzMzMtODUuMzMzMzMzVjIxMy4zMzMzMzNhODUuMzMzMzMzIDg1LjMzMzMzMyAwIDAgMSA4NS4zMzMzMzMtODUuMzMzMzMzeiBtMzY2LjkzMzMzNCAxMjhoMzQuMTMzMzMzYTI1LjYgMjUuNiAwIDAgMSAyNS42IDI1LjZ2MTE5LjQ2NjY2N2EyNS42IDI1LjYgMCAwIDEtMjUuNiAyNS42aC0zNC4xMzMzMzNhMjUuNiAyNS42IDAgMCAxLTI1LjYtMjUuNlYyODEuNmEyNS42IDI1LjYgMCAwIDEgMjUuNi0yNS42ek0yMTMuMzMzMzMzIDIxMy4zMzMzMzN2NTk3LjMzMzMzNGg1OTcuMzMzMzM0VjIxMy4zMzMzMzNIMjEzLjMzMzMzM3ogbTEyOCAwdjI1NmgzNDEuMzMzMzM0VjIxMy4zMzMzMzNoODUuMzMzMzMzdjI5OC42NjY2NjdhNDIuNjY2NjY3IDQyLjY2NjY2NyAwIDAgMS00Mi42NjY2NjcgNDIuNjY2NjY3SDI5OC42NjY2NjdhNDIuNjY2NjY3IDQyLjY2NjY2NyAwIDAgMS00Mi42NjY2NjctNDIuNjY2NjY3VjIxMy4zMzMzMzNoODUuMzMzMzMzek0yNTYgMjEzLjMzMzMzM2g4NS4zMzMzMzMtODUuMzMzMzMzeiBtNDI2LjY2NjY2NyAwaDg1LjMzMzMzMy04NS4zMzMzMzN6IG0wIDU5Ny4zMzMzMzR2LTEyOEgzNDEuMzMzMzMzdjEyOEgyNTZ2LTE3MC42NjY2NjdhNDIuNjY2NjY3IDQyLjY2NjY2NyAwIDAgMSA0Mi42NjY2NjctNDIuNjY2NjY3aDQyNi42NjY2NjZhNDIuNjY2NjY3IDQyLjY2NjY2NyAwIDAgMSA0Mi42NjY2NjcgNDIuNjY2NjY3djE3MC42NjY2NjdoLTg1LjMzMzMzM3ogbTg1LjMzMzMzMyAwaC04NS4zMzMzMzMgODUuMzMzMzMzek0zNDEuMzMzMzMzIDgxMC42NjY2NjdIMjU2aDg1LjMzMzMzM3oiIHAtaWQ9IjI2NzkiIGZpbGw9IiMyYzJjMmMiPjwvcGF0aD48L3N2Zz4=';
+
+    function init() {
+        // 此处获取url前缀方式与Image和PDF文件类型不同
+        var url = getFileUrl();
+        var fileExt = $('#fileExt').val();
+        if (fileExt == "word") {
+            loadWord(url);
+        } else if (fileExt == "excel") {
+            requestExcel(url, 'viewExcel');
+        } else if (fileExt == "ppt") {
+            loadPPT(url);
+        } else {
+            
+        } 
+    }
+
+    function getFileUrl () {
+        var path = $("#filePath").val();
+        return window.location.origin + "/file/" + path;
+    }
+    function loadWord(url) {
+        axios({method: 'get', responseType: 'blob', url: url}).then(({data}) => {
+	      docx.renderAsync(data, document.getElementById("viewWord")) // 渲染到页面
+	    });
+    }
+
+    /* ================================================ Excel·处理 ===================================================
+        加载Excel逻辑：初次加载，则返回Excel文件地址，通过文件加载；
+        若文件有改动，则保存文件到服务器，同时生成json数据文件；
+        后续通过网页请求表格则以json为主，通过文件地址请求表格以Excel文件为主（可能会有样式偏差）；
+    */
+    function requestExcel (url, id) {
+        var params = {method: 'get', url: url + ".json"};
+        // TODO：使用尝试404会不会造成性能损失
+        axios(params).then(res => {
+            // 使用json渲染
+            initSheet(id, res.data, "在线表格");
+        }).catch(e => {
+            // 不存在json，请求原Excel文件
+            if (e.response && e.response.status == 404) {
+                loadExcel(url, id);
+            }
+        });
+    }
+    function initSheet(id, data, title) {
+        window.luckysheet.destroy();
+        window.luckysheet.create({
+            container: id, 
+            lang: 'zh',
+            showinfobar: false,
+            data: data,
+            title: title
+            // userInfo: exportJson.info.name.creator
+        });
+    }
+    // 通过Excel加载文件
+    function loadExcel(url, id) {
+        LuckyExcel.transformExcelToLuckyByUrl(url, "下载.xlsx", function(exportJson, luckysheetfile) {
+            if(exportJson.sheets==null || exportJson.sheets.length==0){
+                return alert("Failed to read the content of the excel file, currently does not support xls files!");
+            }
+            initSheet(id, exportJson.sheets, exportJson.info.name);
+        });
+    }
+    // 保存修改后的Excel数据到服务器，含文件和json
+    function saveExcel() {
+        saveExcelJson();
+        exportExcel(luckysheet.getAllSheets(), "下载", function (data) {
+            uploadExcel(data, "xlsx");
+        });
+    }
+    // 在线表格导出json数据
+	function saveExcelJson(){
+		var options = luckysheet.getAllSheets() // 得到表的数据
+		ExcelCompress.compress(options);
+        
+        // ExcelCompress.decompress(options);
+        
+        var content = JSON.stringify(options);
+        const data = new Blob([content], {
+            type: 'application/json;charset=utf-8'
+        });
+        uploadExcel(data, "json");
+	}
+    // 保存Excel文件和json通用上传过程
+    function uploadExcel (data, fType) {
+        var fileId = $("#fileId").val();
+        var sid = $("#spaceId").val();
+        let fd = new FormData();
+        fd.append('file1', data);
+        fd.append('document_id', fileId);
+        fd.append('space_id', sid);
+        fd.append('fType', fType);
+        axios("/document/UpdateFile", {method: "POST", data: fd}).then(function (res) {
+            if (res.data.code !=undefined && res.data.code.toString() == '0') return alert(res.data.message);
+            if (fType == "xlsx") ShowMessage("保存成功！", 1);
+        }).catch(function (e) {
+            console.log(e);
+        });
+    }
+    // ===========================================End Excel=============================================
+
+    function loadPPT(url) {
+        $("#viewPPT").pptxToHtml({
+            pptxFileUrl: url,
+            slideMode: false,
+            keyBoardShortCut: false,
+            slideModeConfig: {  //on slide mode (slideMode: true)
+                first: 1, 
+                nav: false, /** true,false : show or not nav buttons*/
+                navTxtColor: "white", /** color */
+                navNextTxt:"&#8250;", //">"
+                navPrevTxt: "&#8249;", //"<"
+                showPlayPauseBtn: false,/** true,false */
+                keyBoardShortCut: false, /** true,false */
+                showSlideNum: false, /** true,false */
+                showTotalSlideNum: false, /** true,false */
+                autoSlide: false, /** false or seconds (the pause time between slides) , F8 to active(keyBoardShortCut: true) */
+                randomAutoSlide: false, /** true,false ,autoSlide:true */ 
+                loop: false,  /** true,false */
+                background: "black", /** false or color*/
+                transition: "default", /** transition type: "slid","fade","default","random" , to show transition efects :transitionTime > 0.5 */
+                transitionTime: 1 /** transition time in seconds */
+            }
+        });
+    }
+    
+    // 图片点击放大，带缩放、拖动和背景滤镜
+    function showImg(e) {
+        var url = $(e).attr("src");
+        var img = new Image();
+        img.src = url;
+        img.onload = function () {
+            var width = img.width;
+            var height = img.height;
+            var maxWidth = $(window).width() * 0.9;
+            var maxHeight = $(window).height() * 0.9;
+            if (width > maxWidth) {
+                height = height * maxWidth / width;
+                width = maxWidth;
+            }
+            if (height > maxHeight) {
+                width = width * maxHeight / height;
+                height = maxHeight;
+            }
+            var top = ($(window).height() - height) / 2;
+            var left = ($(window).width() - width) / 2;
+            var html = '<div id="imgDiv" style="position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,0.5);z-index:9999;">';
+            html += '<img id="img" src="' + url + '" style="position:absolute;top:' + top + 'px;left:' + left + 'px;width:' + width + 'px;height:' + height + 'px;cursor:move;" />';
+            html += '</div>';
+            $('body').append(html);
+
+            // 在鼠标停留位置滚动缩放
+            $("#img").on('mousewheel DOMMouseScroll', function (e) {
+                var delta = (e.originalEvent.wheelDelta && (e.originalEvent.wheelDelta > 0 ? 1 : -1)) || (e.originalEvent.detail && (e.originalEvent.detail > 0 ? -1 : 1));
+                if (delta > 0) {
+                    width = width * 1.1;
+                    height = height * 1.1;
+                } else if (delta < 0) {
+                    width = width / 1.1;
+                    height = height / 1.1;
+                }
+                if (width < 100) return;
+                $(this).css({width: width, height: height});
+                left = ($(window).width() - width) / 2;
+                top = ($(window).height() - height) / 2;
+                $(this).css({left: left, top: top});
+            });
+
+            // 拖动
+            $("#img").on('mousedown', function (e) {
+                var x = e.clientX;
+                var y = e.clientY;
+                var l = $(this).position().left;
+                var t = $(this).position().top;
+                $(document).on('mousemove', function (e) {
+                    var nx = e.clientX;
+                    var ny = e.clientY;
+                    var nl = nx - (x - l);
+                    var nt = ny - (y - t);
+                    $("#img").css({left: nl, top: nt});
+                });
+            });
+            
+            $('#imgDiv').on('click', function () {
+                $(this).remove();
+            });
+        }
+    }
+
+
+    
+    
+    $(function() {
+        init();
+    });
+
+</script>

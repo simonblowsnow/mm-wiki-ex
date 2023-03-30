@@ -1,0 +1,93 @@
+<div class="shareMain H100">{{$pageContent := .page_content}}{{$document := .document}}{{$parentDocuments := .parent_documents}}
+    <div class="row center H100">{{$createUser := .create_user}}{{$editUser := .edit_user}}
+        <div class="col-md-1"></div>
+        <div class="col-md-10 H100">
+            <div class="panel panel-body centerCore">
+                <div id="document_page_view" class="H100 pageView">
+                    <p class="view-page-title" style="font-weight: 100; font-size: 22px!important"><i class="fa fa-file-word-o"></i> {{$document.name}}</p>
+                    <p class="view-page-path"><i class="fa fa-folder fa-fw"></i>
+                    {{range $parentDocument := $parentDocuments}}
+                    {{if eq $parentDocument.parent_id "0"}}
+                        {{$parentDocument.name}}
+                    {{else}}
+                        / {{$parentDocument.name}}
+                    {{end}}
+                    {{end}}
+                    </p>
+                    <p class="view-page-time">
+                        <i class="fa fa-newspaper-o fa-fw"></i>
+                        创建于 {{dateFormat $document.create_time "Y/m/d H:i:s"}} By  {{$createUser.username}}
+                    <!-- </p>
+                    <p class="view-page-time"> -->
+                        <!-- <i class="fa fa-edit fa-fw"></i> -->
+                        ， 修改于 {{dateFormat $document.update_time "Y/m/d H:i:s"}} By  {{$editUser.username}}
+                    </p>
+                    <hr style="margin: 0">
+                    <!-- <textarea style="display:none;">{{$pageContent}}</textarea> -->
+                    <!-- 通用预览 -->
+                    <iframe class="ui-layout-center centerTop" id="mainFrame" name="mainFrame" width="100%" frameborder="0" scrolling="yes"
+                        style="overflow-y: auto; min-height: 320px; vertical-align: top;" src="/page/view?document_id={{.doc_id}}&style=1"></iframe>
+                </div>
+            </div>
+            <div class="panel panel-body" style="margin-bottom: 5px; padding-bottom: 10px;">
+                <div class="text-center">
+                    © {{.copyright}}
+                    &nbsp;<i class="glyphicon glyphicon-hand-right"></i>
+                    <a target="_blank" href="https://github.com/simonblowsnow/mm-wiki-ex">Powered by MM Wiki {{.version}}</a>
+                </div>
+            </div>
+        </div>
+        <div id="display_section">
+            <label><i class="glyphicon glyphicon-close"></i></label>
+            <div class="share-popup center">
+                <label> 分享到 <i class="fa fa-wechat"></i> <i class="fa fa-qq"></i></label>
+                <div id="document-qrcode"></div>
+                <label>打开微信“扫一扫”</label>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    $(function() {
+        if (Common.isMobile()) {
+            $("#display_section").hide()
+        }
+
+        editormd.katexURL = {
+            js  : "/static/plugins/editor.md/lib/katex/katex.min",
+            css : "/static/plugins/editor.md/lib/katex/katex.min"
+        };
+        editormd.markdownToHTML("document_page_view", {
+            path : '/static/plugins/editor.md/lib/',
+            //htmlDecode      : true,       // 开启 HTML 标签解析，为了安全性，默认不开启
+            htmlDecode      : "style,script,iframe",  // you can filter tags decode
+            //toc             : false,
+            tocm            : true,    // Using [TOCM]
+            //tocContainer    : "#custom-toc-container", // 自定义 ToC 容器层
+            //gfm             : false,
+            //tocDropdown     : true,
+            //markdownSourceCode : true, // 是否保留 Markdown 源码，即是否删除保存源码的 Textarea 标签
+            emoji           : false,
+            taskList        : true,
+            tex             : true,  // 默认不解析
+            flowChart       : true,  // 默认不解析
+            sequenceDiagram : true,  // 默认不解析
+        });
+
+        $.scrollUp({
+            animation: 'fade',
+            // activeOverlay: '#00FFFF',
+            scrollImg: {
+                active: true,
+                type: 'background',
+                src: 'img/top.png'
+            }
+        });
+
+        $('#document-qrcode').qrcode({
+            width: 120,
+            height: 120,
+            text: window.location.href
+        });
+    });
+</script>
