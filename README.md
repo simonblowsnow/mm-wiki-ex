@@ -173,12 +173,19 @@ MM-Wiki 是站在巨人的肩膀上开发的一款软件，是因为系统中使
 
 # 二次开发
 
-环境要求：go 1.8
+环境要求：go 1.8+
 ```
 $ git clone https://github.com/simonblowsnow/mm-wiki-ex.git
 $ cd mm-wiki
 $ go build ./
 ```
+
+# NGINX及其它问题
+SeLinux导致的权限问题解决：可vim /etc/selinux/config 改为 SELINUX=disabled
+    注：需重启
+nginx主配置转发到主服务的127.0.0.1:8088可能失败，换成固定IP可解决。
+初次安装，可使用原仓库的releases发行版本下的install安装，但配置文件需替换为本仓库的。
+
 
 >如果你想为 mm-wiki 贡献代码，请加开发者交流群：922827699
 

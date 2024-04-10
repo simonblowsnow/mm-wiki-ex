@@ -287,8 +287,12 @@ function decompressFile() {
 // 将压缩包解压为文档
 function decompressToDoc() {
     let msg = "若压缩包内小文件较多，可能导致执行时间较长！";
-    
-
+    var filePath = $("#filePath").val();
+    var fileId = $("#fileId").val();
+    var param = {'file': filePath, 'document_id': fileId};
+    ajaxData('/Decompress', param, function (data) {
+        ShowMessage("迁移成功！", 1);
+    });
 }
 
 // 获取在线解压后形成的服务地址
