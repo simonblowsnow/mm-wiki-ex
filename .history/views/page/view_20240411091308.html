@@ -1,0 +1,159 @@
+<div class="container-fluid H100" style="padding-right: 1px !important;">
+    <div class="row H100">{{$pageContent := .page_content}}{{$document := .document}}{{$parentDocuments := .parent_documents}}
+        
+        <div class="col-md-12 H100">{{$createUser := .create_user}}{{$editUser := .edit_user}}{{$collectionId := .collection_id}}{{$space := .space}}
+            <div class="panel-body PadH">
+                <div class="row">
+                    <div class="col-md-8">
+                        <p class="view-page-title" style="font-size: 16px; font-weight: 400;">{{$document.name}}</p>
+                        <p class="view-page-path" style="font-weight: 100;">
+                            <i class="fa fa-folder fa-fw"></i>
+                            {{range $parentDocument := $parentDocuments}}
+                                {{if eq $parentDocument.parent_id "0"}}
+                                    <span><a class="text text-info" target="_parent" href="/document/index?document_id={{$parentDocument.document_id}}">{{$parentDocument.name}}</a></span>
+                                {{else}}
+                                    <span> / <a target="_parent" href="/document/index?document_id={{$parentDocument.document_id}}">{{$parentDocument.name}}</a></span>
+                                {{end}}
+                            {{end}}
+                        </p>
+                        <p class="view-page-time" style="color: #888">
+                            <i class="fa fa-calendar fa-fw"></i>
+                            被
+                            {{if eq $createUser.user_id $.login_user_id}}
+                                <a class="text text-info" href="/system/main/index" target="_parent">{{$createUser.username}}</a>
+                            {{else}}
+                                <a class="text text-info" href="/user/info?user_id={{$createUser.user_id}}"> {{$createUser.username}}</a>
+                            {{end}}
+                            
+                            {{if eq $document.type "3"}}上传{{else}}创建{{end}}于 
+                            
+                            {{dateFormat $document.create_time "Y/m/d H:i:s"}} ， 被
+                            {{if eq $editUser.user_id $.login_user_id}}
+                                <a class="text text-info" href="/system/main/index" target="_parent">{{$editUser.username}}<span class="text text-primary"></span> </a>
+                            {{else}}
+                                <a class="text text-info" href="/user/info?user_id={{$editUser.user_id}}">{{$editUser.username}}<span class="text text-primary"></span> </a>
+                            {{end}}
+                            最后更新于 {{dateFormat $document.update_time "Y/m/d H:i:s"}}
+                            <a name="history" data-link="/document/history?document_id={{$document.document_id}}">&nbsp<i class="fa fa-history item">查看修改历史</i></a>
+                            <a onclick="Page.attachment({{$document.document_id}})">&nbsp<i class="fa fa-paperclip item"></i> 查看附件</a>
+                        </p>
+                    </div>
+                    
+                    <!-- 格式判定 -->
+                    {{$comType := 1}}
+                    {{if or (eq .file_ext ".md" ".MD" "pkg") (eq .file_type "4")}}{{$comType = 0}}{{end}}
+                    
+                    <div class="col-md-4 text-right">
+                        <div class="btn-group" role="group" aria-label="...">
+                            <!-- 文件地址及类型 -->
+                            <input type="hidden" id="fileId" value="{{.document_id}}">
+                            <input type="hidden" id="fileType" value="{{.file_type}}">
+                            <input type="hidden" id="filePath" value="{{.file_path}}">
+                            <input type="hidden" id="fileUrl" value="{{.file_url}}">
+                            <input type="hidden" id="fileExt" value="{{.file_ext}}">
+                            <!-- Trigger -->
+
+                            <a type="button" id="clipBtn" data-clipboard-text="Just" class="btn btn-default"><i class="glyphicon glyphicon-paperclip"></i>&nbsp;下载</a>
+
+                            {{if eq .is_editor true}}
+                                <a type="button" class="btn btn-default" href="/page/edit?document_id={{$document.document_id}}&category={{.file_ext}}"><i class="glyphicon glyphicon-pencil"></i>&nbsp;编辑</a>
+                            {{end}}
+                            {{if eq $collectionId "0"}}
+                                <a type="button" class="btn btn-default" onclick="Common.ajaxSubmit('/collection/add?type=1&resource_id={{$document.document_id}}')"><i class="glyphicon glyphicon-star-empty"></i>&nbsp;收藏</a>
+                            {{else}}
+                                <a type="button" class="btn btn-default" onclick="Common.ajaxSubmit('/collection/cancel?collection_id={{$collectionId}}')"><i class="glyphicon glyphicon-star"></i>&nbsp;取消</a>
+                            {{end}}
+                            {{if eq $space.is_share "1"}}
+                                <a type="button" class="btn btn-default" name="share" href="/page/display?document_id={{$document.document_id}}" target="_blank"><i class="glyphicon glyphicon-share-alt"></i>&nbsp;分享</a>
+                            {{end}}
+                            {{if eq $space.is_export "1"}}
+                                <button type="button" class="btn btn-default" data-toggle="web-popover" data-placement="bottom"><i class="glyphicon glyphicon-export"></i>&nbsp;导出</button>
+                                <div class="webui-popover-content">
+                                    <ul class="dropdown-menu webui-popover-menu">
+                                        <li><a href="/page/export?document_id={{$document.document_id}}&output=markdown"><span class="fa fa-file-text"></span> Markdown</a></li>
+                                    </ul>
+                                </div>
+                            {{end}}
+                            <!-- HTML文件支持直接在新窗口打开     -->
+                            <a type="button" id="visit" style="display: none" class="btn btn-default"><i class="glyphicon glyphicon-link"></i>&nbsp;打开</a>
+                        </div>
+                    </div>
+                </div>
+                <hr style="margin: 0">
+            </div>
+
+            <div class="panel-body md-view-box page-view-content PadH" >
+                {{if and (eq $comType 0) (ne .file_ext "pkg") (ne .file_type "4")}}
+                    <div class="dir-preview-box">
+                        <div class="dir-preview-btn">
+                            展开目录
+                        </div>
+                        <div class="page-view-dir-toc" id="page-view-dir-toc"></div>
+                    </div>
+                {{end}}
+
+                {{if eq $comType 1}}
+                    <iframe frameborder="0" scrolling="auto" frameborder="0" style="vertical-align: top;" src="/page/viewCom?document_id={{.document_id}}" width="100%" height="100%" /></iframe>
+                {{else if or (eq .file_ext "pkg") (eq .file_type "4")}}
+                    <div id="loading" style="display: none;">
+                        <span class="loading" style="width: 24px; height: 24px; display: block; float: left;"></span>
+                        <span style="display: block; float: left; font-size: 14px; padding-top: 4px;"> Loading ...</span>
+                    </div>
+                    <!-- 压缩包操作 -->
+                    <div style="height: 50px; float: right; transform: translate(0px, -12px);  max-width: 100%;">
+
+                        <input type="hidden" id="fileWebUrl" value="">
+                        <input type="hidden" id="fileWebStatus" value="0">
+                        <input type="hidden" id="innerFilePath" value="">
+                        <div class="btn-group" role="group" aria-label="..." style="float: right">
+                            {{if ne .file_type "4"}}
+                            <a type="button" id="decompression" class="btn btn-default" onclick="decompressFile()" title="在线解压后可生成在线服务地址">
+                                <i class="glyphicon glyphicon-folder-close"></i>&nbsp;在线解压
+                            </a>
+
+                            <a type="button" id="decompressionToDoc" class="btn btn-default" onclick="decompressToDoc()" title="将压缩包解压存储为一般文档">
+                                <i class="glyphicon glyphicon-folder-close"></i>&nbsp;在线解压
+                            </a>
+                            {{end}}
+                            <a type="button" id="webUrl" data-clipboard-text="copy" class="btn btn-default" onclick="getServeUrl()"> 
+                                <i class="glyphicon glyphicon-paperclip"></i>&nbsp;服务
+                            </a>
+                            <a type="button" id="clearPkg" class="btn btn-default"  onclick="DelCompress()" title="清除在线解压，并终止访问服务">
+                                <i class="glyphicon glyphicon-floppy-remove"></i>&nbsp;清除
+                            </a>
+                            <a type="button" id="editFile" class="btn btn-default disabled" onclick="EditInnerFile()" title="选择压缩包内部文件，可在线编辑">
+                                <i class="glyphicon glyphicon-edit"></i>&nbsp;编辑
+                            </a>
+                        </div>
+                    </div>
+                    <div id="fileView" style="padding-left: 60px; padding-top: 25px;"></div>
+                {{else}}
+                    <div id="document_page_view" style="padding: 0 10px 10px 10px;">
+                        <textarea style="display:none;">{{$pageContent}}</textarea>
+                    </div>
+                {{end}}
+                
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/static/plugins/md-toc/md-toc.js"></script>
+<script src='/static/plugins/jquery-tipsy/javascripts/jquery.tipsy.js'></script>
+<script src="/static/plugins/clipboard/clipboard.min.js"></script>
+<script type="text/javascript" src="/static/js/common/utils.js"></script>
+<script type="text/javascript" src="/static/js/modules/view.js"></script>
+
+<script type="text/javascript">
+    Layers.bindIframe("[name='history']", "文档修改历史", "508px", "1000px");
+    $("[data-toggle='web-popover']").webuiPopover({animation: 'pop', autoHide:3000});
+    if (parent.layoutOpen) {
+        parent.layoutOpen();
+    }
+    var InnerIsServer = null;
+
+    
+
+    $(function() {
+        initView();
+    });
+</script>
