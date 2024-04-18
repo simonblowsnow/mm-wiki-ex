@@ -4,11 +4,10 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
+	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
+	"github.com/snail007/go-activerecord/mysql"
 	"strings"
 	"time"
-
-	"github.com/simonblowsnow/go-activerecord/mysql"
-	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
 )
 
 const (

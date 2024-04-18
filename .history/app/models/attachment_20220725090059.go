@@ -2,10 +2,9 @@ package models
 
 import (
 	"fmt"
-	"time"
-
-	"github.com/simonblowsnow/go-activerecord/mysql"
 	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
+	"github.com/snail007/go-activerecord/mysql"
+	"time"
 )
 
 const Table_Attachment_Name = "attachment"

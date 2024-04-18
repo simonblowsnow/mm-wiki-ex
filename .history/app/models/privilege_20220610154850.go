@@ -2,9 +2,8 @@ package models
 
 import (
 	"fmt"
+	"github.com/snail007/go-activerecord/mysql"
 	"time"
-
-	"github.com/simonblowsnow/go-activerecord/mysql"
 )
 
 type Privilege struct {

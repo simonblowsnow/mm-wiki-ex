@@ -1,9 +1,8 @@
 package models
 
 import (
+	"github.com/snail007/go-activerecord/mysql"
 	"time"
-
-	"github.com/simonblowsnow/go-activerecord/mysql"
 )
 
 const Table_Config_Name = "config"

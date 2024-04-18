@@ -73,6 +73,8 @@ github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeV
 github.com/siddontang/go v0.0.0-20180604090527-bdc77568d726/go.mod h1:3yhqj7WBBfRhbBlzyOC3gUxftwsU0u8gqevxwIHQpMw=
 github.com/siddontang/ledisdb v0.0.0-20181029004158-becf5f38d373/go.mod h1:mF1DpOSOUiJRMR+FDqaqu3EBqrybQtrDDszLUZ6oxPg=
 github.com/siddontang/rdb v0.0.0-20150307021120-fc89ed2e418d/go.mod h1:AMEsy7v5z92TR1JKMkLLoaOQk++LVnOKL3ScbJ8GNGA=
+github.com/simonblowsnow/go-activerecord v0.0.0-20240418140358-541453ddda8b h1:21cdHHttjO53ppN8aN+NSbSAA3z/MwTRUQcaxt0sfu0=
+github.com/simonblowsnow/go-activerecord v0.0.0-20240418140358-541453ddda8b/go.mod h1:7mjxwRnDD+13DfX1fHyLdXmWprpJD0kdUl2IwKYSMMw=
 github.com/snail007/go-activerecord v0.0.0-20190813031814-2ac2f3d7cff0 h1:zru9A2cEdHTi1ly8KaAMMw8sS93U2nB1LSvc+YwUCc4=
 github.com/snail007/go-activerecord v0.0.0-20190813031814-2ac2f3d7cff0/go.mod h1:2oXFU20cqErcrOV0B5VjMDuEZBcT9RUUL89uBR3QjsE=
 github.com/ssdb/gossdb v0.0.0-20180723034631-88f6b59b84ec/go.mod h1:QBvMkMya+gXctz3kmljlUCu/yB3GZ6oee+dUozsezQE=
