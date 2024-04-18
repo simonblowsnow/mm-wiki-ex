@@ -10,9 +10,8 @@ import (
 	"strings"
 
 	"github.com/astaxie/beego/logs"
-	"github.com/simonblowsnow/mm-wiki-ex/app/services"
-
 	"github.com/simonblowsnow/mm-wiki-ex/app/models"
+	"github.com/simonblowsnow/mm-wiki-ex/app/services"
 	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
 	// "github.com/astaxie/beego/logs"
 )
@@ -791,6 +790,7 @@ func (this *DataController) DecompressToDoc() {
 
 	pageFolder, _ := filepath.Split(c.pageFile)
 	dc := utils.DocTree{}
+
 	dc.name = c.folder
 	dc.pageFolder = pageFolder
 	dc.absFolder = parent
