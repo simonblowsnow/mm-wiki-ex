@@ -36,19 +36,6 @@ type document struct {
 	lock           sync.Mutex
 }
 
-type DocFileTree struct {
-	spaceId    string
-	user       string
-	name       string
-	path       string
-	docId      int
-	parentId   string
-	pageFolder string
-	absFolder  string
-	tempFolder string
-	fileType   int
-}
-
 // 【修改·增加文档类型为3时不加后缀逻辑】
 // get document page file by parentPath
 func (d *document) GetPageFileByParentPath(name string, docType int, parentPath string) (pageFile string) {

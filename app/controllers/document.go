@@ -789,13 +789,17 @@ func (this *DataController) DecompressToDoc() {
 	}
 
 	// pageFolder, _ := filepath.Split(c.pageFile)
-	// var dc utils.DocFileTree
+	// var dc DocFileTree
 
-	dc := utils.DocFileTree{}
+	dc := models.DocFileTree{}
 	logs.Info(dc)
 
-	// dc.name = c.folder
+	dc.name = c.folder
+
+	// logs.Info(dc.name)
+
 	// dc.pageFolder = pageFolder
+
 	// dc.absFolder = parent
 	// dc.tempFolder = c.fileRoot
 	// dc.spaceId = document["space_id"]

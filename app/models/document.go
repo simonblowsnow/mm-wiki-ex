@@ -32,6 +32,19 @@ type Document struct {
 // 遍历目录树回调函数
 type Callback func(name string, isDir int, parentId int) int
 
+type DocFileTree struct {
+	spaceId    string
+	user       string
+	name       string
+	path       string
+	docId      int
+	parentId   string
+	pageFolder string
+	absFolder  string
+	tempFolder string
+	fileType   int
+}
+
 var DocumentModel = Document{}
 
 // get document by document_id
