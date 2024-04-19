@@ -789,11 +789,10 @@ func (this *DataController) DecompressToDoc() {
 	}
 
 	// pageFolder, _ := filepath.Split(c.pageFile)
-	// var dc utils.DocFileTree
-
-	dc := utils.DocFileTree{}
+	var dc utils.DocFileTree
 	logs.Info(dc)
 
+	// dc := utils.DocFileTree{}
 	// dc.name = c.folder
 	// dc.pageFolder = pageFolder
 	// dc.absFolder = parent

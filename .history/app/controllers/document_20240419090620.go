@@ -788,12 +788,10 @@ func (this *DataController) DecompressToDoc() {
 		this.Abort("查找空间文档 " + documentId + " 失败：" + err.Error())
 	}
 
-	// pageFolder, _ := filepath.Split(c.pageFile)
-	// var dc utils.DocFileTree
+	pageFolder, _ := filepath.Split(c.pageFile)
+	dc := utils.Document{}
 
-	dc := utils.DocFileTree{}
-	logs.Info(dc)
-
+	// dc := utils.DocTree{}
 	// dc.name = c.folder
 	// dc.pageFolder = pageFolder
 	// dc.absFolder = parent

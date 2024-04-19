@@ -788,21 +788,18 @@ func (this *DataController) DecompressToDoc() {
 		this.Abort("查找空间文档 " + documentId + " 失败：" + err.Error())
 	}
 
-	// pageFolder, _ := filepath.Split(c.pageFile)
-	// var dc utils.DocFileTree
+	pageFolder, _ := filepath.Split(c.pageFile)
+	dc := utils.DocTree{}
 
-	dc := utils.DocFileTree{}
-	logs.Info(dc)
-
-	// dc.name = c.folder
-	// dc.pageFolder = pageFolder
-	// dc.absFolder = parent
-	// dc.tempFolder = c.fileRoot
-	// dc.spaceId = document["space_id"]
-	// dc.user = document["user"]
-	// dc.path = document["path"]
-	// dc.parentId = document["parent_id"]
-	// dc.fileType = models.Document_Type_Dir
+	dc.name = c.folder
+	dc.pageFolder = pageFolder
+	dc.absFolder = parent
+	dc.tempFolder = c.fileRoot
+	dc.spaceId = document["space_id"]
+	dc.user = document["user"]
+	dc.path = document["path"]
+	dc.parentId = document["parent_id"]
+	dc.fileType = models.Document_Type_Dir
 
 	/*
 		// TODO: 目录类型的通用过程

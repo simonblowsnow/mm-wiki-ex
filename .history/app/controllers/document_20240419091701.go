@@ -792,8 +792,6 @@ func (this *DataController) DecompressToDoc() {
 	// var dc utils.DocFileTree
 
 	dc := utils.DocFileTree{}
-	logs.Info(dc)
-
 	// dc.name = c.folder
 	// dc.pageFolder = pageFolder
 	// dc.absFolder = parent
