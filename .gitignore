@@ -5,6 +5,7 @@ logs/*.log
 *.exe
 *.exe~
 mm-wiki
+.history/
 *.session/
 .mmwiki.sessions/
 conf/mm-wiki.conf
