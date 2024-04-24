@@ -88,6 +88,7 @@
 	".iso": 	"other",
 	".dll": 	"other",
 	".exe": 	"other",
+	".obj": 	"other",
 	".jar": 	"other",
 	".war": 	"other",
 	".msi": 	"other",

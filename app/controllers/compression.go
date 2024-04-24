@@ -155,6 +155,7 @@ func (c *Compressor) InitCompress(spaceId string, extract bool) error {
 	c.serveRoot = filepath.Join("serve", spaceId, c.folder)
 	// 检测是否存在，也用于获取服务地址
 	c.exist, _ = utils.File.PathIsExists(c.fileRoot)
+
 	if extract {
 		if c.exist {
 			return errors.New("检测到已解压的目录，可能已被解压，若需覆盖请先点击清除后再次操作！")
@@ -278,13 +279,22 @@ func IsGZ(name string) bool {
 	return false
 }
 
+// 因ZIP文件解压时，目录可能不作为单独文件返回，导致遗失目录，无法执行后续复制文件操作
+// 故增加文件类型的目录创建操作，TODO：先判断后创建是否能提高效率？
 func (c *Compressor) ExtractFile(fr FileReader, name string) error {
 	dstName := filepath.Join(c.fileRoot, name)
+
 	if fr.IsDir() {
 		if err := utils.Document.CreateFolder(dstName); err != nil {
 			return err
 		}
 	} else {
+		folder := filepath.Dir(dstName)
+		// ok, _ := utils.File.PathIsExists(folder)
+		if err := os.MkdirAll(folder, 0755); err != nil {
+			return err
+		}
+
 		return CopyFile(fr, dstName)
 	}
 	return nil
@@ -294,7 +304,7 @@ func (c *Compressor) CopyGZ(fr *gzip.Reader) error {
 	dstName := filepath.Join(c.fileRoot, name)
 	fd := utils.Document.OpenFile(dstName)
 	if fd == nil {
-		return errors.New("Open New File Failed")
+		return errors.New("open New File Failed")
 	}
 	if _, err := io.Copy(fd, fr); err != nil {
 		return err
@@ -306,7 +316,7 @@ func (c *Compressor) CopyGZ(fr *gzip.Reader) error {
 func CopyFile(fr FileReader, dstName string) error {
 	fd := utils.Document.OpenFile(dstName)
 	if fd == nil {
-		return errors.New("Open New File Failed")
+		return errors.New("open New File Failed")
 	}
 
 	if _, err := fr.Copy(fd); err != nil {
@@ -437,7 +447,7 @@ func _ExtractTarInnerFile(gr *gzip.Reader, fr *os.File, innerFile string, dst *o
 }
 
 // =========================================华丽丽分界线======================================================
-//解决文件名乱码问题，如果标示位是0，则是默认的本地编码，默认为gbk
+// 解决文件名乱码问题，如果标示位是0，则是默认的本地编码，默认为gbk
 func GetFileNameUtf8(file *zip.File) string {
 	if file.Flags == 0 {
 		i := bytes.NewReader([]byte(file.Name))

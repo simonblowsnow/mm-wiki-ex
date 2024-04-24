@@ -756,6 +756,7 @@ func ComCompress(self beego.Controller, extract bool) (*Compressor, error) {
 	if c.docType == models.Document_Type_Git {
 		extract = false
 	}
+
 	err = c.InitCompress(document["space_id"], extract)
 	if extract && err == nil {
 		_, err = c.GetFileList(true)

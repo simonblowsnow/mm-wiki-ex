@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -241,9 +242,9 @@ func (d *Document) DeleteDBAndFile(documentId string, spaceId string, userId str
 func (d *Document) InsertFolder(dc DocFileTree) (int, error) {
 	src := dc.ServeFolder
 	dst := path.Join(dc.AbsFolder, dc.Name)
-
-	node := &Node{data: dc, next: nil, pre: nil}
-	nl := NodeList{link: node, count: 1}
+	if dc.Name == "" {
+		return 0, errors.New("压缩包文件名不规范！")
+	}
 
 	// 检查系统配置
 	maxCount := beego.AppConfig.String("document::extract_max_count")
@@ -251,17 +252,19 @@ func (d *Document) InsertFolder(dc DocFileTree) (int, error) {
 	if err != nil {
 		return 0, errors.New("系统配置有误：错误的extract_max_count配置" + maxCount)
 	}
-	if nl.count > int(num) {
-		return 0, errors.New("操作失败：当前压缩包包含文件数量超过系统配置最大值" + maxCount)
-	}
 
+	node := &Node{data: dc, next: nil, pre: nil}
+	nl := NodeList{link: node, count: 1, maxCount: num}
 	if err := nl.CopyDir(src, dst, node); err != nil {
 		logs.Error(err)
+		logs.Error(dst)
+		os.RemoveAll(dst)
 		return 0, err
 	}
 
 	var root *Node = node.next
 	if err = d.FolderWriteToDB(node); err != nil {
+		os.RemoveAll(dst)
 		logs.Error(err)
 		return 0, err
 	}

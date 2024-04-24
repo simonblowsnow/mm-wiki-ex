@@ -1,9 +1,11 @@
 package models
 
 import (
+	"errors"
 	"io"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/astaxie/beego/logs"
@@ -16,8 +18,9 @@ type Node struct {
 }
 
 type NodeList struct {
-	link  *Node
-	count int
+	link     *Node
+	count    int
+	maxCount int
 }
 
 func WalkFolder(folder string, parentId int, call Callback) error {
@@ -97,7 +100,9 @@ func (nl *NodeList) CopyDir(src string, dst string, parent *Node) error {
 	for _, fd := range fds {
 		srcfp := path.Join(src, fd.Name())
 		dstfp := path.Join(dst, fd.Name())
-		nl.count++
+		if nl.count++; nl.count > nl.maxCount {
+			return errors.New("操作失败：压缩包所含文件数超过限制" + strconv.Itoa(nl.maxCount))
+		}
 
 		if fd.IsDir() {
 			if err = nl.CopyDir(srcfp, dstfp, node); err != nil {
