@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/astaxie/beego/logs"
 	"github.com/simonblowsnow/mm-wiki-ex/app/models"
 	"github.com/simonblowsnow/mm-wiki-ex/app/services"
 	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
@@ -686,78 +685,18 @@ func GetDirInfo(this *BaseController) (DocInfo, error) {
 	return res, nil
 }
 
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+func GetParentPath(p string) string {
+	index := strings.LastIndex(p, ",")
 
-func FileIsDir(fi os.FileInfo) int {
-	if fi == nil {
-		return 0
+	// 因空间为根节点，故理论上不存在此种情况
+	if index == -1 {
+		return p
+	} else {
+		return p[0:index]
 	}
-	if fi.IsDir() {
-		return 1
-	}
-	return 0
 }
 
-// func CompressToDoc(self beego.Controller, extract bool) (*Compressor, error) {
-// 	c, err := ComCompress(this.Controller, false)
-// 	if err != nil {
-// 		this.Abort(err.Error())
-// 	}
-// 	if !c.exist {
-// 		this.Abort("该文件未在线解压，无需清除！")
-// 	}
-// }
-
-// 将本地文件夹及内部所有转存为在线文档
-func (this *DataController) FolderToDoc(folder string) error {
-	// var files FileList
-	// check document name "Readme"
-
-	/*
-		document, err := models.DocumentModel.GetDocumentByNameParentIdAndSpaceId(filename, info.parentId, info.spaceId, 3)
-		if err != nil {
-			this.ErrorLog("创建保存文档" + filename + "失败：" + err.Error())
-			this.jsonError("创建文档失败！")
-		}
-		if len(document) != 0 {
-			this.jsonError("上传失败，该目录下文档名称'" + filename + "'已经存在，请检查！")
-		}
-
-
-	*/
-
-	// fs := FileList{}
-	// id := 0
-	// logs.Info("Test")
-	// err := WalkFolder(folder, id, func(name string, isDir int, parentId int) int {
-
-	// 	return 0
-	// })
-
-	// idx := len(folder)
-	// err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
-	// 	if path != folder {
-	// 		// fs.setValueD(info, path[idx+1:])
-	// 		name := path[idx+1:]
-	// 		isDir := FileIsDir(info)
-	// 		logs.Info(":::", name, isDir)
-
-	// 	}
-	// 	return nil
-	// })
-
-	files, err := GetLocalFileList(folder)
-
-	if err != nil {
-		this.Abort(err.Error())
-	}
-
-	this.Data["json"] = files
-
-	return nil
-}
-
-// 在线解压转存
+// 在线解压转存，复杂度：三颗星
 func (this *DataController) DecompressToDoc() {
 	documentId := this.GetString("document_id", "")
 	if documentId == "" {
@@ -772,15 +711,11 @@ func (this *DataController) DecompressToDoc() {
 	if !c.exist || c.docType == models.Document_Type_Git {
 		this.Abort("该文件未在线解压，请先点击在线解压按钮！")
 	}
-	// 检查当前文件夹下是否有同名文件夹或文件
+	// 检查当前文件夹下是否有同名文件夹或文件：TODO：是否需要加锁，防止重入
 	parent, _ := filepath.Split(c.path)
 	folder := filepath.Join(parent, c.folder)
-	// flag, _ := utils.File.PathIsExists(folder)
-	// if flag {
-	// 	this.Abort("操作失败：当前目录下已存在同名文件夹或文件！")
-	// }
-	if err := utils.Document.CreateFolder(folder); err != nil {
-		this.Abort("操作失败！")
+	if flag, _ := utils.File.PathIsExists(folder); flag {
+		this.Abort("操作失败：您已在执行过此操作或当前目录下已存在同名文件夹！")
 	}
 
 	document, err := models.DocumentModel.GetDocumentByDocumentId(documentId)
@@ -788,98 +723,28 @@ func (this *DataController) DecompressToDoc() {
 		this.Abort("查找空间文档 " + documentId + " 失败：" + err.Error())
 	}
 
-	// pageFolder, _ := filepath.Split(c.pageFile)
-	// var dc DocFileTree
+	pageFolder, _ := filepath.Split(c.pageFile)
+	parentId, _ := strconv.Atoi(document["parent_id"])
+	dc := models.DocFileTree{
+		Name:        c.folder,
+		PageFolder:  pageFolder,
+		AbsFolder:   parent,
+		ServeFolder: c.fileRoot,
+		SpaceId:     document["space_id"],
+		User:        document["create_user_id"],
+		Path:        GetParentPath(document["path"]), // Root节点较特殊，此path用父path代替
+		DocId:       parentId,                        // Root节点较特殊，此ID用父ID代替
+		FileType:    models.Document_Type_Dir,
+		HasReadMe:   false,
+	}
 
-	dc := models.DocFileTree{}
-	logs.Info(dc)
+	rootId, err := models.DocumentModel.InsertFolder(dc)
+	if err != nil {
+		this.Abort("操作失败:" + err.Error() + "！")
+	}
 
-	dc.name = c.folder
-
-	// logs.Info(dc.name)
-
-	// dc.pageFolder = pageFolder
-
-	// dc.absFolder = parent
-	// dc.tempFolder = c.fileRoot
-	// dc.spaceId = document["space_id"]
-	// dc.user = document["user"]
-	// dc.path = document["path"]
-	// dc.parentId = document["parent_id"]
-	// dc.fileType = models.Document_Type_Dir
-
-	/*
-		// TODO: 目录类型的通用过程
-		// 创建readme.md
-
-		pageFile := utils.Document.GetDefaultPageFileBySpaceName(pageFolder)
-		err = utils.Document.Create(pageFile)
-		if err != nil {
-			this.Abort("操作失败，创建目录文件时出错！")
-		}
-
-		logs.Info("==============", pageFile)
-	*/
-
-	// res, msg := InsertCompressRoot(documentId, c.fileRoot)
-
-	// logs.Info(res, msg)
-
-	// logs.Error(c.fileRoot)
-
-	// this.FolderToDoc(c.fileRoot)
-
-	// logs.Info("===========+++++++++++++++++")
-	// logs.Error(c.pageFile)
-	// logs.Error(c.name)
-	// logs.Error(c.path)
-	// logs.Error(c.folder)
-	// logs.Error(c.fileRoot)
-	// logs.Error(parent)
-	// logs.Error(folder)
-	// logs.Error(flag)
-
-	// this.Data["json"] = map[string]string{"ext": c.ext, "exist": c.serveRoot, "path": c.path}
-
-	// fmt.Print()
-	// fmt.Print()
+	url := "/document/index?document_id=" + strconv.Itoa(rootId)
+	this.Data["json"] = map[string]string{"message": "", "url": url}
 
 	this.ServeJSON()
 }
-
-// return 0 - error, 1 - normal
-func InsertCompressRoot(documentId string, root string) (int, string) {
-	document, err := models.DocumentModel.GetDocumentByDocumentId(documentId)
-	if err != nil {
-		return 0, "查找空间文档 " + documentId + " 失败：" + err.Error()
-	}
-
-	if len(document) == 0 {
-		return 0, "文档不存在！"
-	}
-
-	// 入库
-	_, folder := filepath.Split(root)
-	insertDocument := map[string]interface{}{
-		"space_id":       document["space_id"],
-		"create_user_id": document["create_user_id"],
-		"edit_user_id":   document["edit_user_id"],
-		"name":           folder,
-		"type":           models.Document_Type_Dir,
-		"path":           document["path"],
-		"parent_id":      document["parent_id"],
-	}
-	logs.Info(insertDocument)
-
-	newId, err := models.DocumentModel.Insert(insertDocument)
-	if err != nil {
-		return 0, "创建文档失败：" + err.Error()
-	}
-
-	logs.Info(newId, int(newId))
-	// TODO：此处预留重大漏洞，不检查空间权限
-
-	return int(newId), ""
-}
-
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

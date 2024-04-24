@@ -294,9 +294,8 @@ function decompressToDoc() {
     var fileId = $("#fileId").val();
     var param = {'file': filePath, 'document_id': fileId};
     ajaxData('/DecompressToDoc', param, function (data) {
-        
-        console.log(data);
         ShowMessage("转存成功！", 1);
+        if (data.url && data.url != "") window.location.href = data.url;
     });
 }
 

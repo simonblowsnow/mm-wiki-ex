@@ -1,3 +1,15 @@
 snail007这个仓库问题挺大
 	github.com/snail007/go-activerecord@v0.0.0-20190813031814-2ac2f3d7cff0
 貌似这个版本已经被删除，现将该版本被备份到本人的github仓库
+
+跨package引用struct，成员变量必须大写字母开头，去TMD：
+Also, if you want to export a struct and init this struct value outside of it's package than all fields of the struct must start with capital letter, otherwise you will get an error "Unexported field 'fieldName' usage".
+
+
+
+
+
+
+
+
+

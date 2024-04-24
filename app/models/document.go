@@ -1,14 +1,15 @@
 package models
 
 import (
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"github.com/simonblowsnow/go-activerecord/mysql"
 	"github.com/simonblowsnow/mm-wiki-ex/app/utils"
@@ -33,16 +34,17 @@ type Document struct {
 type Callback func(name string, isDir int, parentId int) int
 
 type DocFileTree struct {
-	spaceId    string
-	user       string
-	name       string
-	path       string
-	docId      int
-	parentId   string
-	pageFolder string
-	absFolder  string
-	tempFolder string
-	fileType   int
+	SpaceId     string
+	User        string
+	Name        string
+	Path        string
+	DocId       int
+	ParentId    string
+	PageFolder  string
+	AbsFolder   string
+	ServeFolder string
+	FileType    int
+	HasReadMe   bool
 }
 
 var DocumentModel = Document{}
@@ -236,27 +238,110 @@ func (d *Document) DeleteDBAndFile(documentId string, spaceId string, userId str
 	return
 }
 
-// TODO：==============================================================
-func WalkFolder(folder string, parentId int, call Callback) error {
-	files, err := ioutil.ReadDir(folder)
+func (d *Document) InsertFolder(dc DocFileTree) (int, error) {
+	src := dc.ServeFolder
+	dst := path.Join(dc.AbsFolder, dc.Name)
+
+	node := &Node{data: dc, next: nil, pre: nil}
+	nl := NodeList{link: node, count: 1}
+
+	// 检查系统配置
+	maxCount := beego.AppConfig.String("document::extract_max_count")
+	num, err := strconv.Atoi(maxCount)
+	if err != nil {
+		return 0, errors.New("系统配置有误：错误的extract_max_count配置" + maxCount)
+	}
+	if nl.count > int(num) {
+		return 0, errors.New("操作失败：当前压缩包包含文件数量超过系统配置最大值" + maxCount)
+	}
+
+	if err := nl.CopyDir(src, dst, node); err != nil {
+		logs.Error(err)
+		return 0, err
+	}
+
+	var root *Node = node.next
+	if err = d.FolderWriteToDB(node); err != nil {
+		logs.Error(err)
+		return 0, err
+	}
+
+	return root.next.data.DocId, nil
+}
+
+// 目录下所有子孙文件存入数据库
+func (d *Document) FolderWriteToDB(node *Node) error {
+	var root *Node = node.next
+	db := G.DB()
+	tx, err := db.Begin(db.Config)
 	if err != nil {
 		return err
 	}
-	for _, file := range files {
-		name := file.Name()
-		if file.IsDir() {
-			id := call(name, 1, parentId)
-			WalkFolder(name, id, call)
-		} else {
-			call(name, 0, parentId)
+
+	user, spaceId, tm := node.data.User, node.data.SpaceId, time.Now().Unix()
+	node = node.next
+	// 遍历链表
+	for {
+		dc, pre := node.data, node.pre.data
+		node.data.Path = pre.Path + "," + strconv.Itoa(pre.DocId)
+		documentValue := map[string]interface{}{
+			"space_id":       spaceId,
+			"create_user_id": user,
+			"edit_user_id":   user,
+			"name":           dc.Name,
+			"type":           dc.FileType,
+			"path":           node.data.Path,
+			"parent_id":      pre.DocId,
+			"create_time":    tm,
+			"update_time":    tm,
 		}
+		// 文档顺序
+		sequence, err := d.GetDocumentMaxSequence(dc.ParentId, spaceId)
+		if err != nil {
+			sequence = 0
+		}
+		sequence += 1
+		documentValue["sequence"] = strconv.Itoa(sequence)
+
+		// 入库及新ID应用
+		var rs *mysql.ResultSet
+		rs, err = db.ExecTx(db.AR().Insert(Table_Document_Name, documentValue), tx)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		node.data.DocId = int(rs.LastInsertId)
+
+		// 为目录补充README.md文件（无视.md后缀的README文件）
+		if node.data.FileType == Document_Type_Dir && !node.data.HasReadMe {
+			pageFile := utils.Document.GetDefaultPageFileBySpaceName(dc.PageFolder)
+			err = utils.Document.Create(pageFile)
+			if err != nil {
+				return errors.New("操作失败，创建目录文件时出错: " + err.Error())
+			}
+		}
+
+		if node.next == nil {
+			break
+		}
+		node = node.next
 	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.New("创建文档失败：" + err.Error())
+	}
+
+	// create document log
+	go func(userId, documentId, spaceId string) {
+		_, err := LogDocumentModel.CreateAction(userId, documentId, spaceId, Document_Type_Dir)
+		if err != nil {
+			logs.Error("create document add log err=%s", err.Error())
+		}
+	}(user, fmt.Sprintf("%d", root.data.DocId), spaceId)
+	logs.Info("Folder Write To DB Finished: ", root.data.DocId)
+
 	return nil
-}
-
-func (d *Document) InsertFolder(documentValue map[string]interface{}) (err error) {
-
-	return
 }
 
 // insert document
@@ -303,11 +388,9 @@ func (d *Document) Insert(documentValue map[string]interface{}) (id int64, err e
 			"type":      fmt.Sprintf("%d", documentValue["type"].(int)),
 			"path":      documentValue["path"].(string),
 		}
-		_, pageFile, err_ := d.GetParentDocumentsByDocument(document)
-		err_ = utils.Document.Create(pageFile)
-		if err_ != nil {
+		_, pageFile, _ := d.GetParentDocumentsByDocument(document)
+		if err = utils.Document.Create(pageFile); err != nil {
 			tx.Rollback()
-			err = err_
 			return
 		}
 	}
