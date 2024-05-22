@@ -20,6 +20,7 @@ const (
 )
 
 const Table_User_Name = "user"
+const Table_Space_User_Name = "space_user"
 
 type User struct {
 }
@@ -89,6 +90,25 @@ func (u *User) GetUserByUsername(username string) (user map[string]string, err e
 	}
 	user = rs.Row()
 	return
+}
+
+// get user default space
+// 新增：用于登陆后获取用户默认空间并跳转
+func (u *User) GetUserSpace(userId string) (spaceId string, err error) {
+	db := G.DB()
+	var rs *mysql.ResultSet
+	rs, err = db.Query(db.AR().From(Table_Space_User_Name).Where(map[string]interface{}{
+		"user_id": userId,
+	}).Limit(0, 1))
+	if err != nil {
+		return "", err
+	}
+	if rs.Len() < 1 {
+		return "", errors.New("该用户没有任何空间权限")
+	}
+	info := rs.Row()
+
+	return info["space_id"], nil
 }
 
 // delete user by user_id

@@ -83,7 +83,17 @@ func (this *AuthorController) Login() {
 	this.Ctx.Request.PostForm.Del("password")
 
 	this.InfoLog("登录成功")
-	this.jsonSuccess("登录成功！", nil, "/main/index")
+
+	url := "/main/index"
+	// 新增功能，普通用户登陆后直接跳转到有权限的空间
+	if user["role_id"] == "3" {
+		space, err := models.UserModel.GetUserSpace(user["user_id"])
+		if err == nil && space != "" {
+			url = "/space/document?space_id=" + space
+		}
+	}
+
+	this.jsonSuccess("登录成功！", nil, url)
 }
 
 // auth login
@@ -178,7 +188,7 @@ func (this *AuthorController) AuthLogin() {
 	this.jsonSuccess("登录成功！", nil, "/main/index")
 }
 
-//logout
+// logout
 func (this *AuthorController) Logout() {
 	this.InfoLog("退出成功")
 	passport := beego.AppConfig.String("author::passport")
